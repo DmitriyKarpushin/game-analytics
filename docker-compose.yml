@@ -22,6 +22,24 @@ services:
     networks:
       - analytics_net
 
+  app:
+    build:
+      context: .
+    container_name: game-analytics-app
+
+    env_file:
+      - .env
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - analytics_net
+
+    profiles:
+      - tools
+
 volumes:
   postgres_data:
 
