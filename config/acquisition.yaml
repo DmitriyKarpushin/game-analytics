@@ -1,0 +1,29 @@
+channels:
+  organic:
+    share: 0.30
+    engagement_modifier: 0.08
+    payer_multiplier: 1.00
+
+  google_ads:
+    share: 0.25
+    engagement_modifier: 0.00
+    payer_multiplier: 0.95
+
+  tiktok:
+    share: 0.20
+    engagement_modifier: -0.10
+    payer_multiplier: 0.80
+
+  facebook:
+    share: 0.15
+    engagement_modifier: 0.02
+    payer_multiplier: 1.15
+
+  referral:
+    share: 0.10
+    engagement_modifier: 0.15
+    payer_multiplier: 1.20
+
+platform_payer_multiplier:
+  android: 1.00
+  ios: 1.25

@@ -1,0 +1,7 @@
+numpy<3,>=2.1
+PyYAML<7,>=6.0
+psycopg[binary]<4,>=3.2
+
+[dev]
+pytest<9,>=8
+ruff<1,>=0.8

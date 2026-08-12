@@ -1,0 +1,51 @@
+game:
+  name: "Merge Kingdom"
+  levels_count: 50
+  default_app_version: "1.0"
+
+countries:
+  US: 0.25
+  GB: 0.12
+  DE: 0.13
+  FR: 0.10
+  BR: 0.20
+  IN: 0.20
+
+platforms:
+  android: 0.65
+  ios: 0.35
+
+device_tiers:
+  low: 0.30
+  mid: 0.50
+  high: 0.20
+
+latent_parameters:
+  skill:
+    distribution: beta
+    alpha: 2.5
+    beta: 2.5
+
+  engagement:
+    distribution: beta
+    alpha: 2.2
+    beta: 3.0
+    min: 0.01
+    max: 0.99
+
+  payer_propensity:
+    distribution: beta
+    alpha: 0.8
+    beta: 8.0
+
+  ad_tolerance:
+    distribution: beta
+    alpha: 2.0
+    beta: 2.0
+
+  base_churn:
+    distribution: beta
+    alpha: 2.0
+    beta: 5.0
+    sampled_weight: 0.7
+    inverse_engagement_weight: 0.3

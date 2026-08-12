@@ -1,0 +1,12 @@
+pyproject.toml
+src/__init__.py
+src/cli/__init__.py
+src/game_analytics.egg-info/PKG-INFO
+src/game_analytics.egg-info/SOURCES.txt
+src/game_analytics.egg-info/dependency_links.txt
+src/game_analytics.egg-info/requires.txt
+src/game_analytics.egg-info/top_level.txt
+src/generators/__init__.py
+src/simulation/__init__.py
+src/storage/__init__.py
+src/validation/__init__.py
