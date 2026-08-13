@@ -53,3 +53,14 @@ latent_parameters:
 simulation:
   start_date: "2026-01-01"
   base_seed: 42
+
+activity:
+  intercept: -0.80
+  engagement_weight: 2.20
+  days_since_last_session_weight: -0.45
+  frustration_weight: -1.50
+  base_churn_weight: -0.70
+  recent_success_weight: 0.25
+  min_probability: 0.001
+  max_probability: 0.98
+  default_recent_success: 0.50

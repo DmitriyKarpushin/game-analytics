@@ -1,8 +1,21 @@
 from collections.abc import Sequence
+from dataclasses import dataclass
+from datetime import date
+from uuid import UUID
 
 from psycopg import Connection
 
 from src.generators.users import UserRecord, UserStateRecord
+
+
+@dataclass(frozen=True)
+class ReturningUserCandidate:
+    user_id: UUID
+    registration_date: date
+    last_active_date: date | None
+    engagement_propensity: float
+    frustration_score: float
+    base_churn_propensity: float
 
 
 class UserRepository:
@@ -102,3 +115,42 @@ class UserRepository:
                 """,
                 rows,
             )
+
+    def fetch_returning_candidates(
+        self,
+        simulation_date: date,
+    ) -> list[ReturningUserCandidate]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT
+                    u.user_id,
+                    u.registration_ts::date,
+                    s.last_active_date,
+                    s.engagement_propensity,
+                    s.frustration_score,
+                    s.base_churn_propensity
+                FROM raw_users u
+                JOIN generator_user_state s
+                    USING (user_id)
+                WHERE
+                    u.registration_ts::date < %s
+                    AND s.is_churned = FALSE
+                ORDER BY u.user_id
+                """,
+                (simulation_date,),
+            )
+
+            rows = cursor.fetchall()
+
+        return [
+            ReturningUserCandidate(
+                user_id=row[0],
+                registration_date=row[1],
+                last_active_date=row[2],
+                engagement_propensity=float(row[3]),
+                frustration_score=float(row[4]),
+                base_churn_propensity=float(row[5]),
+            )
+            for row in rows
+        ]

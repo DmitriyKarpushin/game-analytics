@@ -8,7 +8,14 @@ from src.config.loader import (
     load_game_config,
 )
 from src.generators.users import UserGenerator
-from src.storage.repositories import UserRepository
+from src.simulation.user_state import (
+    ReturningUserState,
+    UserActivitySelector,
+)
+from src.storage.repositories import (
+    ReturningUserCandidate,
+    UserRepository,
+)
 from src.storage.simulation_runs import SimulationRunRepository
 
 
@@ -17,6 +24,7 @@ class SimulationResult:
     simulation_date: date
     seed: int
     users_created: int
+    returning_active_users: int
     events_created: int
 
 
@@ -71,6 +79,20 @@ class DailySimulation:
         self.user_repository.insert_users(users)
         self.user_repository.insert_states(states)
 
+        returning_candidates = (
+            self.user_repository.fetch_returning_candidates(
+                simulation_date
+            )
+        )
+
+        active_returning_users = (
+            self._select_returning_active_users(
+                candidates=returning_candidates,
+                simulation_date=simulation_date,
+                rng=rng,
+            )
+        )
+
         events_created = 0
 
         self.run_repository.mark_success(
@@ -83,8 +105,46 @@ class DailySimulation:
             simulation_date=simulation_date,
             seed=seed,
             users_created=len(users),
+            returning_active_users=len(active_returning_users),
             events_created=events_created,
         )
+
+    def _select_returning_active_users(
+        self,
+        candidates: list[ReturningUserCandidate],
+        simulation_date: date,
+        rng: np.random.Generator,
+    ) -> list[ReturningUserCandidate]:
+        selector = UserActivitySelector(
+            rng=rng,
+            activity_config=self.game_config["activity"],
+        )
+
+        default_recent_success = self.game_config[
+            "activity"
+        ]["default_recent_success"]
+
+        active_users: list[ReturningUserCandidate] = []
+
+        for candidate in candidates:
+            state = ReturningUserState(
+                user_id=candidate.user_id,
+                registration_date=candidate.registration_date,
+                last_active_date=candidate.last_active_date,
+                engagement_propensity=(
+                    candidate.engagement_propensity
+                ),
+                frustration_score=candidate.frustration_score,
+                base_churn_propensity=(
+                    candidate.base_churn_propensity
+                ),
+                recent_success=default_recent_success,
+            )
+
+            if selector.is_active(state, simulation_date):
+                active_users.append(candidate)
+
+        return active_users
 
     def _lambda_for_date(self, simulation_date: date) -> float:
         day_number = (simulation_date - self.start_date).days
