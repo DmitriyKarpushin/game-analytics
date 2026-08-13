@@ -27,3 +27,16 @@ channels:
 platform_payer_multiplier:
   android: 1.00
   ios: 1.25
+
+new_users:
+  base_lambda: 450
+  daily_trend: 0.0015
+
+  weekday_factors:
+    monday: 0.90
+    tuesday: 0.92
+    wednesday: 0.95
+    thursday: 1.00
+    friday: 1.08
+    saturday: 1.20
+    sunday: 1.18

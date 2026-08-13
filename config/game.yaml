@@ -49,3 +49,7 @@ latent_parameters:
     beta: 5.0
     sampled_weight: 0.7
     inverse_engagement_weight: 0.3
+
+simulation:
+  start_date: "2026-01-01"
+  base_seed: 42
