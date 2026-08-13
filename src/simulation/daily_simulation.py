@@ -150,6 +150,11 @@ class DailySimulation:
 
         self.event_repository.insert_events(events)
 
+        self.user_repository.update_session_activity(
+            sessions=sessions,
+            simulation_date=simulation_date,
+        )
+
         self.run_repository.mark_success(
             simulation_date=simulation_date,
             users_created=len(users),

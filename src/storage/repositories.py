@@ -6,8 +6,9 @@ from uuid import UUID
 from psycopg import Connection
 from psycopg.types.json import Jsonb
 
-from src.generators.users import UserRecord, UserStateRecord
 from src.generators.events import EventRecord
+from src.generators.sessions import SessionRecord
+from src.generators.users import UserRecord, UserStateRecord
 
 
 @dataclass(frozen=True)
@@ -156,7 +157,60 @@ class UserRepository:
             )
             for row in rows
         ]
-    
+
+    def update_session_activity(
+        self,
+        sessions: Sequence[SessionRecord],
+        simulation_date: date,
+    ) -> None:
+        if not sessions:
+            return
+
+        summary: dict[UUID, dict] = {}
+
+        for session in sessions:
+            user_summary = summary.setdefault(
+                session.user_id,
+                {
+                    "sessions_count": 0,
+                    "last_session_ts": session.session_end_ts,
+                },
+            )
+
+            user_summary["sessions_count"] += 1
+
+            if (
+                session.session_end_ts
+                > user_summary["last_session_ts"]
+            ):
+                user_summary["last_session_ts"] = (
+                    session.session_end_ts
+                )
+
+        rows = [
+            (
+                simulation_date,
+                values["last_session_ts"],
+                values["sessions_count"],
+                user_id,
+            )
+            for user_id, values in summary.items()
+        ]
+
+        with self.connection.cursor() as cursor:
+            cursor.executemany(
+                """
+                UPDATE generator_user_state
+                SET
+                    last_active_date = %s,
+                    last_session_ts = %s,
+                    total_sessions = total_sessions + %s
+                WHERE user_id = %s
+                """,
+                rows,
+            )
+
+
 class EventRepository:
     def __init__(self, connection: Connection):
         self.connection = connection
