@@ -366,7 +366,11 @@ class DailySimulation:
                 base_churn_propensity=(
                     candidate.base_churn_propensity
                 ),
-                recent_success=default_recent_success,
+                recent_success=(
+                    candidate.recent_success
+                    if candidate.recent_success is not None
+                    else default_recent_success
+                ),
             )
 
             if selector.is_active(

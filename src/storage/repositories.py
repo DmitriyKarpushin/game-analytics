@@ -19,6 +19,7 @@ class ReturningUserCandidate:
     engagement_propensity: float
     frustration_score: float
     base_churn_propensity: float
+    recent_success: float | None = None
     skill: float = 0.5
     current_level: int = 1
     total_levels_completed: int = 0
@@ -147,6 +148,29 @@ class UserRepository:
                     s.engagement_propensity,
                     s.frustration_score,
                     s.base_churn_propensity,
+                    (
+                        SELECT AVG(
+                            CASE
+                                WHEN recent.event_name = 'level_complete'
+                                THEN 1.0
+                                ELSE 0.0
+                            END
+                        )
+                        FROM (
+                            SELECT e.event_name
+                            FROM raw_events e
+                            WHERE
+                                e.user_id = u.user_id
+                                AND e.event_name IN (
+                                    'level_complete',
+                                    'level_fail'
+                                )
+                            ORDER BY
+                                e.event_ts DESC,
+                                e.event_id DESC
+                            LIMIT 5
+                        ) AS recent
+                    ) AS recent_success,
                     s.skill,
                     s.current_level,
                     s.total_levels_completed,
@@ -187,11 +211,16 @@ class UserRepository:
                 engagement_propensity=float(row[3]),
                 frustration_score=float(row[4]),
                 base_churn_propensity=float(row[5]),
-                skill=float(row[6]),
-                current_level=int(row[7]),
-                total_levels_completed=int(row[8]),
-                total_levels_failed=int(row[9]),
-                next_attempt_number=int(row[10]),
+                recent_success=(
+                    None
+                    if row[6] is None
+                    else float(row[6])
+                ),
+                skill=float(row[7]),
+                current_level=int(row[8]),
+                total_levels_completed=int(row[9]),
+                total_levels_failed=int(row[10]),
+                next_attempt_number=int(row[11]),
             )
             for row in rows
         ]

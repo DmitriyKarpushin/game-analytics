@@ -22,6 +22,7 @@ def test_fetch_returning_candidates():
             0.65,
             0.20,
             0.30,
+            0.80,
             0.75,
             4,
             3,
@@ -47,6 +48,7 @@ def test_fetch_returning_candidates():
     assert candidate.engagement_propensity == 0.65
     assert candidate.frustration_score == 0.20
     assert candidate.base_churn_propensity == 0.30
+    assert candidate.recent_success == 0.80
 
     assert candidate.skill == 0.75
     assert candidate.current_level == 4
