@@ -7,12 +7,19 @@ from src.config.loader import (
     load_acquisition_config,
     load_game_config,
 )
+from src.generators.events import EventGenerator
+from src.generators.sessions import (
+    SessionGenerator,
+    SessionRecord,
+    SessionUser,
+)
 from src.generators.users import UserGenerator
 from src.simulation.user_state import (
     ReturningUserState,
     UserActivitySelector,
 )
 from src.storage.repositories import (
+    EventRepository,
     ReturningUserCandidate,
     UserRepository,
 )
@@ -25,6 +32,7 @@ class SimulationResult:
     seed: int
     users_created: int
     returning_active_users: int
+    sessions_created: int
     events_created: int
 
 
@@ -33,10 +41,12 @@ class DailySimulation:
         self,
         run_repository: SimulationRunRepository,
         user_repository: UserRepository,
+        event_repository: EventRepository,
         base_seed: int | None = None,
     ):
         self.run_repository = run_repository
         self.user_repository = user_repository
+        self.event_repository = event_repository
 
         self.game_config = load_game_config()
         self.acquisition_config = load_acquisition_config()
@@ -93,12 +103,57 @@ class DailySimulation:
             )
         )
 
-        events_created = 0
+        session_generator = SessionGenerator(
+            rng=rng,
+            session_config=self.game_config["sessions"],
+        )
+
+        sessions: list[SessionRecord] = []
+
+        for user, state in zip(users, states):
+            sessions.extend(
+                session_generator.generate_for_user(
+                    SessionUser(
+                        user_id=user.user_id,
+                        engagement_propensity=(
+                            state.engagement_propensity
+                        ),
+                        earliest_start_ts=user.registration_ts,
+                    ),
+                    simulation_date,
+                )
+            )
+
+        for candidate in active_returning_users:
+            sessions.extend(
+                session_generator.generate_for_user(
+                    SessionUser(
+                        user_id=candidate.user_id,
+                        engagement_propensity=(
+                            candidate.engagement_propensity
+                        ),
+                    ),
+                    simulation_date,
+                )
+            )
+
+        event_generator = EventGenerator(
+            rng=rng,
+            app_version=self.game_config["game"][
+                "default_app_version"
+            ],
+        )
+
+        events = event_generator.generate_session_events(
+            sessions
+        )
+
+        self.event_repository.insert_events(events)
 
         self.run_repository.mark_success(
             simulation_date=simulation_date,
             users_created=len(users),
-            events_created=events_created,
+            events_created=len(events),
         )
 
         return SimulationResult(
@@ -106,7 +161,8 @@ class DailySimulation:
             seed=seed,
             users_created=len(users),
             returning_active_users=len(active_returning_users),
-            events_created=events_created,
+            sessions_created=len(sessions),
+            events_created=len(events),
         )
 
     def _select_returning_active_users(

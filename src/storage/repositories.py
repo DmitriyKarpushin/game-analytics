@@ -4,8 +4,10 @@ from datetime import date
 from uuid import UUID
 
 from psycopg import Connection
+from psycopg.types.json import Jsonb
 
 from src.generators.users import UserRecord, UserStateRecord
+from src.generators.events import EventRecord
 
 
 @dataclass(frozen=True)
@@ -154,3 +156,53 @@ class UserRepository:
             )
             for row in rows
         ]
+    
+class EventRepository:
+    def __init__(self, connection: Connection):
+        self.connection = connection
+
+    def insert_events(
+        self,
+        events: Sequence[EventRecord],
+    ) -> None:
+        if not events:
+            return
+
+        rows = [
+            (
+                event.event_id,
+                event.event_ts,
+                event.event_date,
+                event.user_id,
+                event.session_id,
+                event.event_name,
+                event.level_id,
+                event.attempt_number,
+                event.app_version,
+                Jsonb(event.event_properties),
+            )
+            for event in events
+        ]
+
+        with self.connection.cursor() as cursor:
+            cursor.executemany(
+                """
+                INSERT INTO raw_events (
+                    event_id,
+                    event_ts,
+                    event_date,
+                    user_id,
+                    session_id,
+                    event_name,
+                    level_id,
+                    attempt_number,
+                    app_version,
+                    event_properties
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s
+                )
+                """,
+                rows,
+            )

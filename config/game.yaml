@@ -64,3 +64,12 @@ activity:
   min_probability: 0.001
   max_probability: 0.98
   default_recent_success: 0.50
+
+sessions:
+  poisson_engagement_multiplier: 1.5
+  max_sessions_per_day: 5
+
+  duration_median_minutes: 10.0
+  duration_sigma: 0.45
+  min_duration_minutes: 2
+  max_duration_minutes: 30
