@@ -1,0 +1,251 @@
+levels:
+  1:
+    base_difficulty: 0.2646
+    energy_cost: 5
+    reward_coins: 22
+    base_duration_sec: 92
+  2:
+    base_difficulty: 0.2544
+    energy_cost: 5
+    reward_coins: 24
+    base_duration_sec: 94
+  3:
+    base_difficulty: 0.2913
+    energy_cost: 5
+    reward_coins: 26
+    base_duration_sec: 96
+  4:
+    base_difficulty: 0.3041
+    energy_cost: 5
+    reward_coins: 28
+    base_duration_sec: 98
+  5:
+    base_difficulty: 0.2707
+    energy_cost: 5
+    reward_coins: 30
+    base_duration_sec: 100
+  6:
+    base_difficulty: 0.2905
+    energy_cost: 5
+    reward_coins: 32
+    base_duration_sec: 102
+  7:
+    base_difficulty: 0.3219
+    energy_cost: 5
+    reward_coins: 34
+    base_duration_sec: 104
+  8:
+    base_difficulty: 0.4053
+    energy_cost: 5
+    reward_coins: 36
+    base_duration_sec: 106
+  9:
+    base_difficulty: 0.3397
+    energy_cost: 5
+    reward_coins: 38
+    base_duration_sec: 108
+  10:
+    base_difficulty: 0.3372
+    energy_cost: 5
+    reward_coins: 40
+    base_duration_sec: 110
+  11:
+    base_difficulty: 0.3732
+    energy_cost: 5
+    reward_coins: 42
+    base_duration_sec: 112
+  12:
+    base_difficulty: 0.3817
+    energy_cost: 5
+    reward_coins: 44
+    base_duration_sec: 114
+  13:
+    base_difficulty: 0.381
+    energy_cost: 5
+    reward_coins: 46
+    base_duration_sec: 116
+  14:
+    base_difficulty: 0.4069
+    energy_cost: 5
+    reward_coins: 48
+    base_duration_sec: 118
+  15:
+    base_difficulty: 0.407
+    energy_cost: 5
+    reward_coins: 50
+    base_duration_sec: 120
+  16:
+    base_difficulty: 0.3971
+    energy_cost: 5
+    reward_coins: 52
+    base_duration_sec: 122
+  17:
+    base_difficulty: 0.6755
+    energy_cost: 5
+    reward_coins: 54
+    base_duration_sec: 124
+  18:
+    base_difficulty: 0.4156
+    energy_cost: 5
+    reward_coins: 56
+    base_duration_sec: 126
+  19:
+    base_difficulty: 0.4532
+    energy_cost: 5
+    reward_coins: 58
+    base_duration_sec: 128
+  20:
+    base_difficulty: 0.4493
+    energy_cost: 5
+    reward_coins: 60
+    base_duration_sec: 130
+  21:
+    base_difficulty: 0.4572
+    energy_cost: 5
+    reward_coins: 62
+    base_duration_sec: 132
+  22:
+    base_difficulty: 0.4598
+    energy_cost: 5
+    reward_coins: 64
+    base_duration_sec: 134
+  23:
+    base_difficulty: 0.4983
+    energy_cost: 5
+    reward_coins: 66
+    base_duration_sec: 136
+  24:
+    base_difficulty: 0.4877
+    energy_cost: 5
+    reward_coins: 68
+    base_duration_sec: 138
+  25:
+    base_difficulty: 0.4936
+    energy_cost: 5
+    reward_coins: 70
+    base_duration_sec: 140
+  26:
+    base_difficulty: 0.5047
+    energy_cost: 5
+    reward_coins: 72
+    base_duration_sec: 142
+  27:
+    base_difficulty: 0.528
+    energy_cost: 5
+    reward_coins: 74
+    base_duration_sec: 144
+  28:
+    base_difficulty: 0.5355
+    energy_cost: 5
+    reward_coins: 76
+    base_duration_sec: 146
+  29:
+    base_difficulty: 0.5462
+    energy_cost: 5
+    reward_coins: 78
+    base_duration_sec: 148
+  30:
+    base_difficulty: 0.5565
+    energy_cost: 5
+    reward_coins: 80
+    base_duration_sec: 150
+  31:
+    base_difficulty: 0.7421
+    energy_cost: 5
+    reward_coins: 82
+    base_duration_sec: 152
+  32:
+    base_difficulty: 0.5639
+    energy_cost: 5
+    reward_coins: 84
+    base_duration_sec: 154
+  33:
+    base_difficulty: 0.5723
+    energy_cost: 5
+    reward_coins: 86
+    base_duration_sec: 156
+  34:
+    base_difficulty: 0.5778
+    energy_cost: 5
+    reward_coins: 88
+    base_duration_sec: 158
+  35:
+    base_difficulty: 0.6092
+    energy_cost: 5
+    reward_coins: 90
+    base_duration_sec: 160
+  36:
+    base_difficulty: 0.6269
+    energy_cost: 5
+    reward_coins: 92
+    base_duration_sec: 162
+  37:
+    base_difficulty: 0.6183
+    energy_cost: 5
+    reward_coins: 94
+    base_duration_sec: 164
+  38:
+    base_difficulty: 0.6174
+    energy_cost: 5
+    reward_coins: 96
+    base_duration_sec: 166
+  39:
+    base_difficulty: 0.6276
+    energy_cost: 5
+    reward_coins: 98
+    base_duration_sec: 168
+  40:
+    base_difficulty: 0.6598
+    energy_cost: 5
+    reward_coins: 100
+    base_duration_sec: 170
+  41:
+    base_difficulty: 0.6711
+    energy_cost: 5
+    reward_coins: 102
+    base_duration_sec: 172
+  42:
+    base_difficulty: 0.6781
+    energy_cost: 5
+    reward_coins: 104
+    base_duration_sec: 174
+  43:
+    base_difficulty: 0.67
+    energy_cost: 5
+    reward_coins: 106
+    base_duration_sec: 176
+  44:
+    base_difficulty: 0.6935
+    energy_cost: 5
+    reward_coins: 108
+    base_duration_sec: 178
+  45:
+    base_difficulty: 0.7018
+    energy_cost: 5
+    reward_coins: 110
+    base_duration_sec: 180
+  46:
+    base_difficulty: 0.7133
+    energy_cost: 5
+    reward_coins: 112
+    base_duration_sec: 182
+  47:
+    base_difficulty: 0.7331
+    energy_cost: 5
+    reward_coins: 114
+    base_duration_sec: 184
+  48:
+    base_difficulty: 0.7334
+    energy_cost: 5
+    reward_coins: 116
+    base_duration_sec: 186
+  49:
+    base_difficulty: 0.7502
+    energy_cost: 5
+    reward_coins: 118
+    base_duration_sec: 188
+  50:
+    base_difficulty: 0.751
+    energy_cost: 5
+    reward_coins: 120
+    base_duration_sec: 190
