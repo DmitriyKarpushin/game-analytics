@@ -5,20 +5,28 @@ from uuid import UUID
 from src.storage.repositories import UserRepository
 
 
+USER_ID = UUID(
+    "00000000-0000-4000-8000-000000000001"
+)
+
+
 def test_fetch_returning_candidates():
     connection = MagicMock()
     cursor = connection.cursor.return_value.__enter__.return_value
 
-    user_id = UUID("00000000-0000-4000-8000-000000000001")
-
     cursor.fetchall.return_value = [
         (
-            user_id,
+            USER_ID,
             date(2026, 1, 1),
             date(2026, 1, 2),
             0.65,
             0.20,
             0.30,
+            0.75,
+            4,
+            3,
+            2,
+            3,
         )
     ]
 
@@ -32,14 +40,22 @@ def test_fetch_returning_candidates():
 
     candidate = candidates[0]
 
-    assert candidate.user_id == user_id
+    assert candidate.user_id == USER_ID
     assert candidate.registration_date == date(2026, 1, 1)
     assert candidate.last_active_date == date(2026, 1, 2)
+
     assert candidate.engagement_propensity == 0.65
     assert candidate.frustration_score == 0.20
     assert candidate.base_churn_propensity == 0.30
 
+    assert candidate.skill == 0.75
+    assert candidate.current_level == 4
+    assert candidate.total_levels_completed == 3
+    assert candidate.total_levels_failed == 2
+    assert candidate.next_attempt_number == 3
+
     cursor.execute.assert_called_once()
+
     assert cursor.execute.call_args.args[1] == (
         date(2026, 1, 3),
     )

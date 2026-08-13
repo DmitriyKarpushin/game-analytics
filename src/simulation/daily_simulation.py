@@ -1,3 +1,4 @@
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import date
 
@@ -6,8 +7,13 @@ import numpy as np
 from src.config.loader import (
     load_acquisition_config,
     load_game_config,
+    load_levels_config,
 )
-from src.generators.events import EventGenerator
+from src.generators.events import EventGenerator, EventRecord
+from src.generators.gameplay import (
+    GameplayGenerator,
+    GameplayUserState,
+)
 from src.generators.sessions import (
     SessionGenerator,
     SessionRecord,
@@ -20,6 +26,7 @@ from src.simulation.user_state import (
 )
 from src.storage.repositories import (
     EventRepository,
+    GameplayStateUpdate,
     ReturningUserCandidate,
     UserRepository,
 )
@@ -50,6 +57,7 @@ class DailySimulation:
 
         self.game_config = load_game_config()
         self.acquisition_config = load_acquisition_config()
+        self.levels_config = load_levels_config()["levels"]
 
         simulation_config = self.game_config["simulation"]
 
@@ -144,8 +152,29 @@ class DailySimulation:
             ],
         )
 
-        events = event_generator.generate_session_events(
-            sessions
+        session_events = (
+            event_generator.generate_session_events(
+                sessions
+            )
+        )
+
+        gameplay_events, gameplay_updates = (
+            self._generate_gameplay(
+                rng=rng,
+                sessions=sessions,
+                new_users=users,
+                new_states=states,
+                returning_users=active_returning_users,
+            )
+        )
+
+        events: list[EventRecord] = [
+            *session_events,
+            *gameplay_events,
+        ]
+
+        events.sort(
+            key=lambda event: event.event_ts
         )
 
         self.event_repository.insert_events(events)
@@ -153,6 +182,10 @@ class DailySimulation:
         self.user_repository.update_session_activity(
             sessions=sessions,
             simulation_date=simulation_date,
+        )
+
+        self.user_repository.update_gameplay_state(
+            gameplay_updates
         )
 
         self.run_repository.mark_success(
@@ -165,10 +198,138 @@ class DailySimulation:
             simulation_date=simulation_date,
             seed=seed,
             users_created=len(users),
-            returning_active_users=len(active_returning_users),
+            returning_active_users=len(
+                active_returning_users
+            ),
             sessions_created=len(sessions),
             events_created=len(events),
         )
+
+    def _generate_gameplay(
+        self,
+        rng: np.random.Generator,
+        sessions: list[SessionRecord],
+        new_users,
+        new_states,
+        returning_users: list[ReturningUserCandidate],
+    ) -> tuple[
+        list[EventRecord],
+        list[GameplayStateUpdate],
+    ]:
+        sessions_by_user = defaultdict(list)
+
+        for session in sessions:
+            sessions_by_user[session.user_id].append(
+                session
+            )
+
+        generator = GameplayGenerator(
+            rng=rng,
+            gameplay_config=self.game_config["gameplay"],
+            levels_config=self.levels_config,
+            app_version=self.game_config["game"][
+                "default_app_version"
+            ],
+        )
+
+        events: list[EventRecord] = []
+        updates: list[GameplayStateUpdate] = []
+
+        for user, state in zip(new_users, new_states):
+            user_sessions = sessions_by_user.get(
+                user.user_id,
+                [],
+            )
+
+            if not user_sessions:
+                continue
+
+            result = generator.generate(
+                GameplayUserState(
+                    user_id=user.user_id,
+                    skill=state.skill,
+                    current_level=state.current_level,
+                    frustration_score=(
+                        state.frustration_score
+                    ),
+                    total_levels_completed=(
+                        state.total_levels_completed
+                    ),
+                    total_levels_failed=(
+                        state.total_levels_failed
+                    ),
+                    next_attempt_number=1,
+                ),
+                user_sessions,
+            )
+
+            events.extend(result.events)
+
+            updates.append(
+                GameplayStateUpdate(
+                    user_id=user.user_id,
+                    current_level=result.current_level,
+                    frustration_score=(
+                        result.frustration_score
+                    ),
+                    total_levels_completed=(
+                        result.total_levels_completed
+                    ),
+                    total_levels_failed=(
+                        result.total_levels_failed
+                    ),
+                )
+            )
+
+        for candidate in returning_users:
+            user_sessions = sessions_by_user.get(
+                candidate.user_id,
+                [],
+            )
+
+            if not user_sessions:
+                continue
+
+            result = generator.generate(
+                GameplayUserState(
+                    user_id=candidate.user_id,
+                    skill=candidate.skill,
+                    current_level=candidate.current_level,
+                    frustration_score=(
+                        candidate.frustration_score
+                    ),
+                    total_levels_completed=(
+                        candidate.total_levels_completed
+                    ),
+                    total_levels_failed=(
+                        candidate.total_levels_failed
+                    ),
+                    next_attempt_number=(
+                        candidate.next_attempt_number
+                    ),
+                ),
+                user_sessions,
+            )
+
+            events.extend(result.events)
+
+            updates.append(
+                GameplayStateUpdate(
+                    user_id=candidate.user_id,
+                    current_level=result.current_level,
+                    frustration_score=(
+                        result.frustration_score
+                    ),
+                    total_levels_completed=(
+                        result.total_levels_completed
+                    ),
+                    total_levels_failed=(
+                        result.total_levels_failed
+                    ),
+                )
+            )
+
+        return events, updates
 
     def _select_returning_active_users(
         self,
@@ -190,25 +351,39 @@ class DailySimulation:
         for candidate in candidates:
             state = ReturningUserState(
                 user_id=candidate.user_id,
-                registration_date=candidate.registration_date,
-                last_active_date=candidate.last_active_date,
+                registration_date=(
+                    candidate.registration_date
+                ),
+                last_active_date=(
+                    candidate.last_active_date
+                ),
                 engagement_propensity=(
                     candidate.engagement_propensity
                 ),
-                frustration_score=candidate.frustration_score,
+                frustration_score=(
+                    candidate.frustration_score
+                ),
                 base_churn_propensity=(
                     candidate.base_churn_propensity
                 ),
                 recent_success=default_recent_success,
             )
 
-            if selector.is_active(state, simulation_date):
+            if selector.is_active(
+                state,
+                simulation_date,
+            ):
                 active_users.append(candidate)
 
         return active_users
 
-    def _lambda_for_date(self, simulation_date: date) -> float:
-        day_number = (simulation_date - self.start_date).days
+    def _lambda_for_date(
+        self,
+        simulation_date: date,
+    ) -> float:
+        day_number = (
+            simulation_date - self.start_date
+        ).days
 
         if day_number < 0:
             raise ValueError(
@@ -217,25 +392,45 @@ class DailySimulation:
 
         config = self.acquisition_config["new_users"]
 
-        trend = 1.0 + day_number * config["daily_trend"]
+        trend = (
+            1.0
+            + day_number * config["daily_trend"]
+        )
 
-        weekday_name = simulation_date.strftime("%A").lower()
-        weekday_factor = config["weekday_factors"][weekday_name]
+        weekday_name = (
+            simulation_date.strftime("%A").lower()
+        )
 
-        return config["base_lambda"] * trend * weekday_factor
+        weekday_factor = config[
+            "weekday_factors"
+        ][weekday_name]
+
+        return (
+            config["base_lambda"]
+            * trend
+            * weekday_factor
+        )
 
     def _generate_new_users_count(
         self,
         simulation_date: date,
         rng: np.random.Generator,
     ) -> int:
-        lambda_day = self._lambda_for_date(simulation_date)
+        lambda_day = self._lambda_for_date(
+            simulation_date
+        )
 
         return int(rng.poisson(lambda_day))
 
-    def _seed_for_date(self, simulation_date: date) -> int:
+    def _seed_for_date(
+        self,
+        simulation_date: date,
+    ) -> int:
         seed_sequence = np.random.SeedSequence(
-            [self.base_seed, simulation_date.toordinal()]
+            [
+                self.base_seed,
+                simulation_date.toordinal(),
+            ]
         )
 
         return int(

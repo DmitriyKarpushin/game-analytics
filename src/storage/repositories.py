@@ -19,6 +19,20 @@ class ReturningUserCandidate:
     engagement_propensity: float
     frustration_score: float
     base_churn_propensity: float
+    skill: float = 0.5
+    current_level: int = 1
+    total_levels_completed: int = 0
+    total_levels_failed: int = 0
+    next_attempt_number: int = 1
+
+
+@dataclass(frozen=True)
+class GameplayStateUpdate:
+    user_id: UUID
+    current_level: int
+    frustration_score: float
+    total_levels_completed: int
+    total_levels_failed: int
 
 
 class UserRepository:
@@ -132,7 +146,26 @@ class UserRepository:
                     s.last_active_date,
                     s.engagement_propensity,
                     s.frustration_score,
-                    s.base_churn_propensity
+                    s.base_churn_propensity,
+                    s.skill,
+                    s.current_level,
+                    s.total_levels_completed,
+                    s.total_levels_failed,
+                    CASE
+                        WHEN s.current_level BETWEEN 1 AND 50
+                        THEN COALESCE(
+                            (
+                                SELECT MAX(e.attempt_number) + 1
+                                FROM raw_events e
+                                WHERE
+                                    e.user_id = u.user_id
+                                    AND e.level_id = s.current_level
+                                    AND e.event_name = 'level_fail'
+                            ),
+                            1
+                        )
+                        ELSE 1
+                    END AS next_attempt_number
                 FROM raw_users u
                 JOIN generator_user_state s
                     USING (user_id)
@@ -154,6 +187,11 @@ class UserRepository:
                 engagement_propensity=float(row[3]),
                 frustration_score=float(row[4]),
                 base_churn_propensity=float(row[5]),
+                skill=float(row[6]),
+                current_level=int(row[7]),
+                total_levels_completed=int(row[8]),
+                total_levels_failed=int(row[9]),
+                next_attempt_number=int(row[10]),
             )
             for row in rows
         ]
@@ -205,6 +243,38 @@ class UserRepository:
                     last_active_date = %s,
                     last_session_ts = %s,
                     total_sessions = total_sessions + %s
+                WHERE user_id = %s
+                """,
+                rows,
+            )
+
+    def update_gameplay_state(
+        self,
+        updates: Sequence[GameplayStateUpdate],
+    ) -> None:
+        if not updates:
+            return
+
+        rows = [
+            (
+                update.current_level,
+                update.frustration_score,
+                update.total_levels_completed,
+                update.total_levels_failed,
+                update.user_id,
+            )
+            for update in updates
+        ]
+
+        with self.connection.cursor() as cursor:
+            cursor.executemany(
+                """
+                UPDATE generator_user_state
+                SET
+                    current_level = %s,
+                    frustration_score = %s,
+                    total_levels_completed = %s,
+                    total_levels_failed = %s
                 WHERE user_id = %s
                 """,
                 rows,

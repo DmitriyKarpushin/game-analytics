@@ -73,3 +73,20 @@ sessions:
   duration_sigma: 0.45
   min_duration_minutes: 2
   max_duration_minutes: 30
+
+gameplay:
+  skill_weight: 2.0
+  difficulty_weight: 2.5
+  attempt_weight: 0.30
+  min_success_probability: 0.05
+  max_success_probability: 0.98
+
+  frustration:
+    fail_increase: 0.04
+    third_fail_extra: 0.05
+    fifth_fail_extra: 0.10
+    level_17_fail_extra: 0.03
+    success_decrease: 0.08
+    daily_decay: 0.90
+
+  gap_between_attempts_sec: 10

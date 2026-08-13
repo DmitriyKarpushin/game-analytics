@@ -44,6 +44,11 @@ def make_candidate(
         engagement_propensity=engagement,
         frustration_score=frustration,
         base_churn_propensity=churn,
+        skill=0.6,
+        current_level=3,
+        total_levels_completed=2,
+        total_levels_failed=1,
+        next_attempt_number=1,
     )
 
 
@@ -62,8 +67,12 @@ def test_same_date_and_base_seed_produce_same_seed():
 def test_different_dates_produce_different_seeds():
     simulation, _, _, _ = make_simulation()
 
-    seed_1 = simulation._seed_for_date(date(2026, 1, 1))
-    seed_2 = simulation._seed_for_date(date(2026, 1, 2))
+    seed_1 = simulation._seed_for_date(
+        date(2026, 1, 1)
+    )
+    seed_2 = simulation._seed_for_date(
+        date(2026, 1, 2)
+    )
 
     assert seed_1 != seed_2
 
@@ -85,7 +94,11 @@ def test_weekend_and_trend_affect_lambda():
         date(2026, 1, 3)
     )
 
-    expected = 450 * (1 + 2 * 0.0015) * 1.20
+    expected = (
+        450
+        * (1 + 2 * 0.0015)
+        * 1.20
+    )
 
     assert lambda_day == pytest.approx(expected)
 
@@ -94,7 +107,9 @@ def test_date_before_start_date_is_rejected():
     simulation, _, _, _ = make_simulation()
 
     with pytest.raises(ValueError):
-        simulation._lambda_for_date(date(2025, 12, 31))
+        simulation._lambda_for_date(
+            date(2025, 12, 31)
+        )
 
 
 def test_returning_selection_is_reproducible():
@@ -112,16 +127,20 @@ def test_returning_selection_is_reproducible():
         ),
     ]
 
-    result_1 = simulation._select_returning_active_users(
-        candidates,
-        date(2026, 1, 2),
-        np.random.default_rng(42),
+    result_1 = (
+        simulation._select_returning_active_users(
+            candidates,
+            date(2026, 1, 2),
+            np.random.default_rng(42),
+        )
     )
 
-    result_2 = simulation._select_returning_active_users(
-        candidates,
-        date(2026, 1, 2),
-        np.random.default_rng(42),
+    result_2 = (
+        simulation._select_returning_active_users(
+            candidates,
+            date(2026, 1, 2),
+            np.random.default_rng(42),
+        )
     )
 
     assert result_1 == result_2
@@ -139,16 +158,20 @@ def test_returning_selection_returns_subset():
         ),
     ]
 
-    active = simulation._select_returning_active_users(
-        candidates,
-        date(2026, 1, 2),
-        np.random.default_rng(42),
+    active = (
+        simulation._select_returning_active_users(
+            candidates,
+            date(2026, 1, 2),
+            np.random.default_rng(42),
+        )
     )
 
-    assert set(active).issubset(set(candidates))
+    assert set(active).issubset(
+        set(candidates)
+    )
 
 
-def test_run_generates_users_sessions_and_events():
+def test_run_generates_users_sessions_and_gameplay():
     (
         simulation,
         run_repository,
@@ -172,21 +195,41 @@ def test_run_generates_users_sessions_and_events():
     assert result.returning_active_users == 0
     assert result.sessions_created > 0
 
-    assert result.events_created == (
-        result.sessions_created * 2
-    )
-
     user_repository.insert_users.assert_called_once()
     user_repository.insert_states.assert_called_once()
     event_repository.insert_events.assert_called_once()
 
-    users = user_repository.insert_users.call_args.args[0]
-    states = user_repository.insert_states.call_args.args[0]
-    events = event_repository.insert_events.call_args.args[0]
+    user_repository.update_session_activity.assert_called_once()
+    user_repository.update_gameplay_state.assert_called_once()
+
+    users = (
+        user_repository
+        .insert_users
+        .call_args
+        .args[0]
+    )
+
+    states = (
+        user_repository
+        .insert_states
+        .call_args
+        .args[0]
+    )
+
+    events = (
+        event_repository
+        .insert_events
+        .call_args
+        .args[0]
+    )
 
     assert len(users) == result.users_created
     assert len(states) == result.users_created
     assert len(events) == result.events_created
+
+    assert result.events_created > (
+        result.sessions_created * 2
+    )
 
     run_repository.mark_success.assert_called_once_with(
         simulation_date=date_,
@@ -195,7 +238,7 @@ def test_run_generates_users_sessions_and_events():
     )
 
 
-def test_generated_events_are_session_pairs():
+def test_generated_events_include_sessions_and_gameplay():
     (
         simulation,
         _,
@@ -203,9 +246,16 @@ def test_generated_events_are_session_pairs():
         event_repository,
     ) = make_simulation()
 
-    result = simulation.run(date(2026, 1, 1))
+    result = simulation.run(
+        date(2026, 1, 1)
+    )
 
-    events = event_repository.insert_events.call_args.args[0]
+    events = (
+        event_repository
+        .insert_events
+        .call_args
+        .args[0]
+    )
 
     starts = [
         event
@@ -219,6 +269,58 @@ def test_generated_events_are_session_pairs():
         if event.event_name == "session_end"
     ]
 
+    level_starts = [
+        event
+        for event in events
+        if event.event_name == "level_start"
+    ]
+
+    level_results = [
+        event
+        for event in events
+        if event.event_name in {
+            "level_fail",
+            "level_complete",
+        }
+    ]
+
     assert len(starts) == result.sessions_created
     assert len(ends) == result.sessions_created
-    assert len(events) == result.sessions_created * 2
+
+    assert len(level_starts) > 0
+    assert len(level_results) > 0
+    assert len(level_starts) == len(level_results)
+
+    assert result.events_created == (
+        len(starts)
+        + len(ends)
+        + len(level_starts)
+        + len(level_results)
+    )
+
+
+def test_all_events_are_chronologically_sorted():
+    (
+        simulation,
+        _,
+        _,
+        event_repository,
+    ) = make_simulation()
+
+    simulation.run(
+        date(2026, 1, 1)
+    )
+
+    events = (
+        event_repository
+        .insert_events
+        .call_args
+        .args[0]
+    )
+
+    timestamps = [
+        event.event_ts
+        for event in events
+    ]
+
+    assert timestamps == sorted(timestamps)
