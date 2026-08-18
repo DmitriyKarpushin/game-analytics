@@ -1,0 +1,18 @@
+purchase:
+  base_daily_probability: 0.002
+  payer_propensity_weight: 0.05
+
+  preferred_price_median_usd: 5.0
+  preferred_price_sigma: 0.70
+
+  products:
+    - sku: coins_small
+      price_usd: 0.99
+    - sku: coins_medium
+      price_usd: 2.99
+    - sku: coins_standard
+      price_usd: 4.99
+    - sku: coins_large
+      price_usd: 9.99
+    - sku: coins_mega
+      price_usd: 19.99

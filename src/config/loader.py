@@ -33,3 +33,7 @@ def load_acquisition_config() -> dict[str, Any]:
 
 def load_levels_config() -> dict[str, Any]:
     return load_yaml("levels.yaml")
+
+
+def load_monetization_config() -> dict[str, Any]:
+    return load_yaml("monetization.yaml")

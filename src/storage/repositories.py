@@ -19,6 +19,7 @@ class ReturningUserCandidate:
     engagement_propensity: float
     frustration_score: float
     base_churn_propensity: float
+    payer_propensity: float = 0.0
     recent_success: float | None = None
     skill: float = 0.5
     current_level: int = 1
@@ -148,6 +149,7 @@ class UserRepository:
                     s.engagement_propensity,
                     s.frustration_score,
                     s.base_churn_propensity,
+                    s.payer_propensity,
                     (
                         SELECT AVG(
                             CASE
@@ -211,16 +213,17 @@ class UserRepository:
                 engagement_propensity=float(row[3]),
                 frustration_score=float(row[4]),
                 base_churn_propensity=float(row[5]),
+                payer_propensity=float(row[6]),
                 recent_success=(
                     None
-                    if row[6] is None
-                    else float(row[6])
+                    if row[7] is None
+                    else float(row[7])
                 ),
-                skill=float(row[7]),
-                current_level=int(row[8]),
-                total_levels_completed=int(row[9]),
-                total_levels_failed=int(row[10]),
-                next_attempt_number=int(row[11]),
+                skill=float(row[8]),
+                current_level=int(row[9]),
+                total_levels_completed=int(row[10]),
+                total_levels_failed=int(row[11]),
+                next_attempt_number=int(row[12]),
             )
             for row in rows
         ]
@@ -276,6 +279,51 @@ class UserRepository:
                 """,
                 rows,
             )
+
+    def update_purchase_spend(
+        self,
+        events: Sequence[EventRecord],
+    ) -> None:
+        purchases = [
+            event
+            for event in events
+            if event.event_name == "purchase"
+        ]
+
+        if not purchases:
+            return
+
+        spend_by_user: dict[UUID, float] = {}
+
+        for event in purchases:
+            price_usd = float(
+                event.event_properties["price_usd"]
+            )
+
+            spend_by_user[event.user_id] = (
+                spend_by_user.get(event.user_id, 0.0)
+                + price_usd
+            )
+
+        rows = [
+            (
+                total_spend,
+                user_id,
+            )
+            for user_id, total_spend
+            in spend_by_user.items()
+        ]
+
+        with self.connection.cursor() as cursor:
+            cursor.executemany(
+                '''
+                UPDATE generator_user_state
+                SET total_spend = total_spend + %s
+                WHERE user_id = %s
+                ''',
+                rows,
+            )
+
 
     def update_gameplay_state(
         self,

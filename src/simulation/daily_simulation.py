@@ -8,11 +8,16 @@ from src.config.loader import (
     load_acquisition_config,
     load_game_config,
     load_levels_config,
+    load_monetization_config,
 )
 from src.generators.events import EventGenerator, EventRecord
 from src.generators.gameplay import (
     GameplayGenerator,
     GameplayUserState,
+)
+from src.generators.purchases import (
+    PurchaseGenerator,
+    PurchaseUser,
 )
 from src.generators.sessions import (
     SessionGenerator,
@@ -58,6 +63,7 @@ class DailySimulation:
         self.game_config = load_game_config()
         self.acquisition_config = load_acquisition_config()
         self.levels_config = load_levels_config()["levels"]
+        self.monetization_config = load_monetization_config()
 
         simulation_config = self.game_config["simulation"]
 
@@ -168,9 +174,18 @@ class DailySimulation:
             )
         )
 
+        purchase_events = self._generate_purchases(
+            rng=rng,
+            sessions=sessions,
+            new_users=users,
+            new_states=states,
+            returning_users=active_returning_users,
+        )
+
         events: list[EventRecord] = [
             *session_events,
             *gameplay_events,
+            *purchase_events,
         ]
 
         events.sort(
@@ -186,6 +201,10 @@ class DailySimulation:
 
         self.user_repository.update_gameplay_state(
             gameplay_updates
+        )
+
+        self.user_repository.update_purchase_spend(
+            purchase_events
         )
 
         self.run_repository.mark_success(
@@ -204,6 +223,67 @@ class DailySimulation:
             sessions_created=len(sessions),
             events_created=len(events),
         )
+
+    def _generate_purchases(
+        self,
+        rng: np.random.Generator,
+        sessions: list[SessionRecord],
+        new_users,
+        new_states,
+        returning_users: list[ReturningUserCandidate],
+    ) -> list[EventRecord]:
+        sessions_by_user = defaultdict(list)
+
+        for session in sessions:
+            sessions_by_user[session.user_id].append(
+                session
+            )
+
+        generator = PurchaseGenerator(
+            rng=rng,
+            purchase_config=self.monetization_config[
+                "purchase"
+            ],
+            app_version=self.game_config["game"][
+                "default_app_version"
+            ],
+        )
+
+        events: list[EventRecord] = []
+
+        for user, state in zip(new_users, new_states):
+            events.extend(
+                generator.generate_for_user(
+                    PurchaseUser(
+                        user_id=user.user_id,
+                        payer_propensity=(
+                            state.payer_propensity
+                        ),
+                    ),
+                    sessions_by_user.get(
+                        user.user_id,
+                        [],
+                    ),
+                )
+            )
+
+        for candidate in returning_users:
+            events.extend(
+                generator.generate_for_user(
+                    PurchaseUser(
+                        user_id=candidate.user_id,
+                        payer_propensity=(
+                            candidate.payer_propensity
+                        ),
+                    ),
+                    sessions_by_user.get(
+                        candidate.user_id,
+                        [],
+                    ),
+                )
+            )
+
+        return events
 
     def _generate_gameplay(
         self,

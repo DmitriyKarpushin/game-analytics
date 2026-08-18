@@ -201,6 +201,7 @@ def test_run_generates_users_sessions_and_gameplay():
 
     user_repository.update_session_activity.assert_called_once()
     user_repository.update_gameplay_state.assert_called_once()
+    user_repository.update_purchase_spend.assert_called_once()
 
     users = (
         user_repository
@@ -284,6 +285,12 @@ def test_generated_events_include_sessions_and_gameplay():
         }
     ]
 
+    purchases = [
+        event
+        for event in events
+        if event.event_name == "purchase"
+    ]
+
     assert len(starts) == result.sessions_created
     assert len(ends) == result.sessions_created
 
@@ -296,6 +303,7 @@ def test_generated_events_include_sessions_and_gameplay():
         + len(ends)
         + len(level_starts)
         + len(level_results)
+        + len(purchases)
     )
 
 
