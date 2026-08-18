@@ -2,6 +2,11 @@ purchase:
   base_daily_probability: 0.002
   payer_propensity_weight: 0.05
 
+  repeat_base_daily_probability: 0.03
+  repeat_payer_propensity_weight: 0.12
+  repeat_purchase_count_lambda: 1.20
+  max_purchases_per_day: 3
+
   preferred_price_median_usd: 5.0
   preferred_price_sigma: 0.70
 

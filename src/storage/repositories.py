@@ -20,6 +20,7 @@ class ReturningUserCandidate:
     frustration_score: float
     base_churn_propensity: float
     payer_propensity: float = 0.0
+    total_spend: float = 0.0
     recent_success: float | None = None
     skill: float = 0.5
     current_level: int = 1
@@ -150,6 +151,7 @@ class UserRepository:
                     s.frustration_score,
                     s.base_churn_propensity,
                     s.payer_propensity,
+                    s.total_spend,
                     (
                         SELECT AVG(
                             CASE
@@ -214,16 +216,17 @@ class UserRepository:
                 frustration_score=float(row[4]),
                 base_churn_propensity=float(row[5]),
                 payer_propensity=float(row[6]),
+                total_spend=float(row[7]),
                 recent_success=(
                     None
-                    if row[7] is None
-                    else float(row[7])
+                    if row[8] is None
+                    else float(row[8])
                 ),
-                skill=float(row[8]),
-                current_level=int(row[9]),
-                total_levels_completed=int(row[10]),
-                total_levels_failed=int(row[11]),
-                next_attempt_number=int(row[12]),
+                skill=float(row[9]),
+                current_level=int(row[10]),
+                total_levels_completed=int(row[11]),
+                total_levels_failed=int(row[12]),
+                next_attempt_number=int(row[13]),
             )
             for row in rows
         ]

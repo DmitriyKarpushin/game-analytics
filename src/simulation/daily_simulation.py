@@ -259,6 +259,7 @@ class DailySimulation:
                         payer_propensity=(
                             state.payer_propensity
                         ),
+                        total_spend=state.total_spend,
                     ),
                     sessions_by_user.get(
                         user.user_id,
@@ -274,6 +275,9 @@ class DailySimulation:
                         user_id=candidate.user_id,
                         payer_propensity=(
                             candidate.payer_propensity
+                        ),
+                        total_spend=(
+                            candidate.total_spend
                         ),
                     ),
                     sessions_by_user.get(
