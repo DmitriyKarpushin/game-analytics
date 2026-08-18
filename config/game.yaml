@@ -55,9 +55,10 @@ simulation:
   base_seed: 42
 
 activity:
-  intercept: -0.80
+  intercept: -0.523
   engagement_weight: 2.20
   days_since_last_session_weight: -0.45
+  user_age_days_weight: -0.40
   frustration_weight: -1.50
   base_churn_weight: -0.70
   recent_success_weight: 0.25

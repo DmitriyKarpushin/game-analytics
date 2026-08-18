@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 from datetime import date
-from math import exp
+from math import exp, log1p
 
 import numpy as np
 
@@ -16,10 +16,6 @@ class ReturningUserState:
     recent_success: float
 
 
-def sigmoid(value: float) -> float:
-    return 1.0 / (1.0 + exp(-value))
-
-
 class UserActivitySelector:
     def __init__(
         self,
@@ -29,15 +25,18 @@ class UserActivitySelector:
         self.rng = rng
         self.config = activity_config
 
+    @staticmethod
+    def _sigmoid(value: float) -> float:
+        return 1.0 / (1.0 + exp(-value))
+
     def activity_probability(
         self,
-        user: ReturningUserState,
+        state: ReturningUserState,
         simulation_date: date,
     ) -> float:
         reference_date = (
-            user.last_active_date
-            if user.last_active_date is not None
-            else user.registration_date
+            state.last_active_date
+            or state.registration_date
         )
 
         days_since_last_session = max(
@@ -45,21 +44,33 @@ class UserActivitySelector:
             0,
         )
 
-        logit_p = (
-            self.config["intercept"]
-            + self.config["engagement_weight"]
-            * user.engagement_propensity
-            + self.config["days_since_last_session_weight"]
-            * days_since_last_session
-            + self.config["frustration_weight"]
-            * user.frustration_score
-            + self.config["base_churn_weight"]
-            * user.base_churn_propensity
-            + self.config["recent_success_weight"]
-            * user.recent_success
+        user_age_days = max(
+            (
+                simulation_date
+                - state.registration_date
+            ).days,
+            0,
         )
 
-        probability = sigmoid(logit_p)
+        logit = (
+            self.config["intercept"]
+            + self.config["engagement_weight"]
+            * state.engagement_propensity
+            + self.config[
+                "days_since_last_session_weight"
+            ]
+            * days_since_last_session
+            + self.config["user_age_days_weight"]
+            * log1p(user_age_days)
+            + self.config["frustration_weight"]
+            * state.frustration_score
+            + self.config["base_churn_weight"]
+            * state.base_churn_propensity
+            + self.config["recent_success_weight"]
+            * state.recent_success
+        )
+
+        probability = self._sigmoid(logit)
 
         return float(
             np.clip(
@@ -71,12 +82,14 @@ class UserActivitySelector:
 
     def is_active(
         self,
-        user: ReturningUserState,
+        state: ReturningUserState,
         simulation_date: date,
     ) -> bool:
         probability = self.activity_probability(
-            user,
+            state,
             simulation_date,
         )
 
-        return bool(self.rng.random() < probability)
+        return bool(
+            self.rng.random() < probability
+        )
