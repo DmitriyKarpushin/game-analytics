@@ -10,6 +10,7 @@ from src.config.loader import (
     load_levels_config,
     load_monetization_config,
 )
+from src.generators.ads import AdGenerator, AdUser
 from src.generators.events import EventGenerator, EventRecord
 from src.generators.gameplay import (
     GameplayGenerator,
@@ -182,10 +183,19 @@ class DailySimulation:
             returning_users=active_returning_users,
         )
 
+        ad_events = self._generate_ads(
+            rng=rng,
+            sessions=sessions,
+            new_users=users,
+            new_states=states,
+            returning_users=active_returning_users,
+        )
+
         events: list[EventRecord] = [
             *session_events,
             *gameplay_events,
             *purchase_events,
+            *ad_events,
         ]
 
         events.sort(
@@ -223,6 +233,69 @@ class DailySimulation:
             sessions_created=len(sessions),
             events_created=len(events),
         )
+
+    def _generate_ads(
+        self,
+        rng: np.random.Generator,
+        sessions: list[SessionRecord],
+        new_users,
+        new_states,
+        returning_users: list[ReturningUserCandidate],
+    ) -> list[EventRecord]:
+        sessions_by_user = defaultdict(list)
+
+        for session in sessions:
+            sessions_by_user[session.user_id].append(
+                session
+            )
+
+        generator = AdGenerator(
+            rng=rng,
+            ads_config=self.monetization_config["ads"],
+            app_version=self.game_config["game"][
+                "default_app_version"
+            ],
+        )
+
+        events: list[EventRecord] = []
+
+        for user, state in zip(new_users, new_states):
+            events.extend(
+                generator.generate_for_user(
+                    AdUser(
+                        user_id=user.user_id,
+                        engagement_propensity=(
+                            state.engagement_propensity
+                        ),
+                        ad_tolerance=state.ad_tolerance,
+                    ),
+                    sessions_by_user.get(
+                        user.user_id,
+                        [],
+                    ),
+                )
+            )
+
+        for candidate in returning_users:
+            events.extend(
+                generator.generate_for_user(
+                    AdUser(
+                        user_id=candidate.user_id,
+                        engagement_propensity=(
+                            candidate.engagement_propensity
+                        ),
+                        ad_tolerance=(
+                            candidate.ad_tolerance
+                        ),
+                    ),
+                    sessions_by_user.get(
+                        candidate.user_id,
+                        [],
+                    ),
+                )
+            )
+
+        return events
 
     def _generate_purchases(
         self,

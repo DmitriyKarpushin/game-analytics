@@ -23,6 +23,7 @@ def test_fetch_returning_candidates():
             0.20,
             0.30,
             0.12,
+            0.65,
             14.97,
             0.80,
             0.75,
@@ -51,6 +52,7 @@ def test_fetch_returning_candidates():
     assert candidate.frustration_score == 0.20
     assert candidate.base_churn_propensity == 0.30
     assert candidate.payer_propensity == 0.12
+    assert candidate.ad_tolerance == 0.65
     assert candidate.total_spend == 14.97
     assert candidate.recent_success == 0.80
 

@@ -291,6 +291,18 @@ def test_generated_events_include_sessions_and_gameplay():
         if event.event_name == "purchase"
     ]
 
+    ad_impressions = [
+        event
+        for event in events
+        if event.event_name == "ad_impression"
+    ]
+
+    ad_revenues = [
+        event
+        for event in events
+        if event.event_name == "ad_revenue"
+    ]
+
     assert len(starts) == result.sessions_created
     assert len(ends) == result.sessions_created
 
@@ -304,7 +316,11 @@ def test_generated_events_include_sessions_and_gameplay():
         + len(level_starts)
         + len(level_results)
         + len(purchases)
+        + len(ad_impressions)
+        + len(ad_revenues)
     )
+
+    assert len(ad_impressions) == len(ad_revenues)
 
 
 def test_all_events_are_chronologically_sorted():

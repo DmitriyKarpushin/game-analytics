@@ -21,3 +21,17 @@ purchase:
       price_usd: 9.99
     - sku: coins_mega
       price_usd: 19.99
+
+ads:
+  rewarded:
+    base_probability: 0.10
+    ad_tolerance_weight: 0.25
+    engagement_weight: 0.15
+    max_probability: 0.80
+    revenue_per_impression_usd: 0.018
+
+  interstitial:
+    base_probability: 0.25
+    ad_tolerance_weight: -0.15
+    min_probability: 0.05
+    revenue_per_impression_usd: 0.008
