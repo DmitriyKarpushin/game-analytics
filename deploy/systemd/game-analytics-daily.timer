@@ -1,0 +1,10 @@
+[Unit]
+Description=Run Game Analytics pipeline daily
+
+[Timer]
+OnCalendar=*-*-* 02:15:00
+Persistent=true
+Unit=game-analytics-daily.service
+
+[Install]
+WantedBy=timers.target

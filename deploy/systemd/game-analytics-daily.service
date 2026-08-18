@@ -1,0 +1,12 @@
+[Unit]
+Description=Game Analytics daily simulation and raw validation
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=analytics
+WorkingDirectory=/home/analytics/game-analytics
+ExecStart=/usr/bin/docker compose run --rm -T app python -m src.cli.run_pending
+ExecStartPost=/usr/bin/docker compose run --rm -T app python -m src.cli.validate_raw
+TimeoutStartSec=0
