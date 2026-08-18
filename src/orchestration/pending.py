@@ -144,6 +144,17 @@ class PendingSimulationRunner:
             results: list[SimulationResult] = []
 
             for simulation_date in pending_dates:
+                seed = self.simulation.seed_for_date(
+                    simulation_date
+                )
+
+                self.run_repository.start(
+                    simulation_date=simulation_date,
+                    seed=seed,
+                )
+
+                self.connection.commit()
+
                 try:
                     result = self.simulation.run(
                         simulation_date
@@ -153,6 +164,16 @@ class PendingSimulationRunner:
 
                 except BaseException:
                     self.connection.rollback()
+
+                    try:
+                        self.run_repository.mark_failed(
+                            simulation_date
+                        )
+                        self.connection.commit()
+
+                    except BaseException:
+                        self.connection.rollback()
+
                     raise
 
                 results.append(result)
@@ -166,6 +187,8 @@ class PendingSimulationRunner:
             )
 
         finally:
+            self.connection.rollback()
+
             release_advisory_lock(
                 self.connection
             )

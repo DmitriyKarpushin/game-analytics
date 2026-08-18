@@ -102,6 +102,14 @@ class DailySimulation:
             else base_seed
         )
 
+    def seed_for_date(
+        self,
+        simulation_date: date,
+    ) -> int:
+        return self._seed_for_date(
+            simulation_date
+        )
+
     def run(self, simulation_date: date) -> SimulationResult:
         self.run_repository.ensure_date_can_run(simulation_date)
 

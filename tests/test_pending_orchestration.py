@@ -1,6 +1,6 @@
 from datetime import date
 from types import SimpleNamespace
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 
 import pytest
 
@@ -93,6 +93,59 @@ def test_historical_gap_is_rejected():
         )
 
 
+def test_runner_persists_running_before_generation(
+    monkeypatch,
+):
+    connection = MagicMock()
+
+    simulation = MagicMock()
+    simulation.start_date = START
+    simulation.seed_for_date.return_value = 123
+    simulation.run.return_value = (
+        make_result(
+            date(2026, 1, 2)
+        )
+    )
+
+    repository = MagicMock()
+    repository.fetch_success_dates.return_value = [
+        date(2026, 1, 1),
+    ]
+
+    monkeypatch.setattr(
+        pending,
+        "try_advisory_lock",
+        lambda connection: True,
+    )
+
+    monkeypatch.setattr(
+        pending,
+        "release_advisory_lock",
+        MagicMock(),
+    )
+
+    runner = PendingSimulationRunner(
+        connection=connection,
+        simulation=simulation,
+        run_repository=repository,
+    )
+
+    runner.run(
+        date(2026, 1, 2)
+    )
+
+    repository.start.assert_called_once_with(
+        simulation_date=date(2026, 1, 2),
+        seed=123,
+    )
+
+    simulation.run.assert_called_once_with(
+        date(2026, 1, 2)
+    )
+
+    assert connection.commit.call_count == 2
+
+
 def test_runner_commits_each_successful_day(
     monkeypatch,
 ):
@@ -100,6 +153,11 @@ def test_runner_commits_each_successful_day(
 
     simulation = MagicMock()
     simulation.start_date = START
+
+    simulation.seed_for_date.side_effect = [
+        103,
+        104,
+    ]
 
     simulation.run.side_effect = [
         make_result(date(2026, 1, 3)),
@@ -118,12 +176,10 @@ def test_runner_commits_each_successful_day(
         lambda connection: True,
     )
 
-    unlock = MagicMock()
-
     monkeypatch.setattr(
         pending,
         "release_advisory_lock",
-        unlock,
+        MagicMock(),
     )
 
     runner = PendingSimulationRunner(
@@ -141,34 +197,37 @@ def test_runner_commits_each_successful_day(
         date(2026, 1, 4),
     )
 
-    assert [
-        call.args[0]
-        for call in simulation.run.call_args_list
-    ] == [
-        date(2026, 1, 3),
-        date(2026, 1, 4),
+    assert repository.start.call_args_list == [
+        call(
+            simulation_date=date(
+                2026, 1, 3
+            ),
+            seed=103,
+        ),
+        call(
+            simulation_date=date(
+                2026, 1, 4
+            ),
+            seed=104,
+        ),
     ]
 
-    assert connection.commit.call_count == 2
-    connection.rollback.assert_not_called()
+    assert connection.commit.call_count == 4
 
-    unlock.assert_called_once_with(
-        connection
-    )
+    repository.mark_failed.assert_not_called()
 
 
-def test_runner_rolls_back_only_failed_day(
+def test_runner_persists_failed_day(
     monkeypatch,
 ):
     connection = MagicMock()
 
     simulation = MagicMock()
     simulation.start_date = START
-
-    simulation.run.side_effect = [
-        make_result(date(2026, 1, 2)),
-        RuntimeError("boom"),
-    ]
+    simulation.seed_for_date.return_value = 102
+    simulation.run.side_effect = RuntimeError(
+        "boom"
+    )
 
     repository = MagicMock()
     repository.fetch_success_dates.return_value = [
@@ -181,7 +240,76 @@ def test_runner_rolls_back_only_failed_day(
         lambda connection: True,
     )
 
-    unlock = MagicMock()
+    monkeypatch.setattr(
+        pending,
+        "release_advisory_lock",
+        MagicMock(),
+    )
+
+    runner = PendingSimulationRunner(
+        connection=connection,
+        simulation=simulation,
+        run_repository=repository,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match="boom",
+    ):
+        runner.run(
+            date(2026, 1, 2)
+        )
+
+    repository.start.assert_called_once_with(
+        simulation_date=date(2026, 1, 2),
+        seed=102,
+    )
+
+    repository.mark_failed.assert_called_once_with(
+        date(2026, 1, 2)
+    )
+
+    assert connection.commit.call_count == 2
+    assert connection.rollback.call_count >= 2
+
+
+def test_keyboard_interrupt_records_failure_before_unlock(
+    monkeypatch,
+):
+    connection = MagicMock()
+    order = []
+
+    connection.rollback.side_effect = (
+        lambda: order.append("rollback")
+    )
+
+    connection.commit.side_effect = (
+        lambda: order.append("commit")
+    )
+
+    simulation = MagicMock()
+    simulation.start_date = START
+    simulation.seed_for_date.return_value = 102
+    simulation.run.side_effect = KeyboardInterrupt()
+
+    repository = MagicMock()
+    repository.fetch_success_dates.return_value = [
+        date(2026, 1, 1),
+    ]
+
+    repository.mark_failed.side_effect = (
+        lambda simulation_date:
+        order.append("failed")
+    )
+
+    monkeypatch.setattr(
+        pending,
+        "try_advisory_lock",
+        lambda connection: True,
+    )
+
+    def unlock(connection):
+        order.append("unlock")
 
     monkeypatch.setattr(
         pending,
@@ -196,18 +324,21 @@ def test_runner_rolls_back_only_failed_day(
     )
 
     with pytest.raises(
-        RuntimeError,
-        match="boom",
+        KeyboardInterrupt
     ):
         runner.run(
-            date(2026, 1, 3)
+            date(2026, 1, 2)
         )
 
-    assert connection.commit.call_count == 1
-    assert connection.rollback.call_count == 1
+    assert "failed" in order
+    assert order[-1] == "unlock"
 
-    unlock.assert_called_once_with(
-        connection
+    assert (
+        order.index("rollback")
+        < order.index("failed")
+        < order.index(
+            "unlock"
+        )
     )
 
 
@@ -240,57 +371,3 @@ def test_runner_rejects_parallel_execution(
 
     repository.fetch_success_dates.assert_not_called()
     simulation.run.assert_not_called()
-
-
-def test_runner_rolls_back_before_unlock_on_keyboard_interrupt(
-    monkeypatch,
-):
-    connection = MagicMock()
-    call_order = []
-
-    connection.rollback.side_effect = (
-        lambda: call_order.append("rollback")
-    )
-
-    simulation = MagicMock()
-    simulation.start_date = START
-    simulation.run.side_effect = KeyboardInterrupt()
-
-    repository = MagicMock()
-    repository.fetch_success_dates.return_value = [
-        date(2026, 1, 1),
-    ]
-
-    monkeypatch.setattr(
-        pending,
-        "try_advisory_lock",
-        lambda connection: True,
-    )
-
-    def record_unlock(connection):
-        call_order.append("unlock")
-
-    monkeypatch.setattr(
-        pending,
-        "release_advisory_lock",
-        record_unlock,
-    )
-
-    runner = PendingSimulationRunner(
-        connection=connection,
-        simulation=simulation,
-        run_repository=repository,
-    )
-
-    with pytest.raises(KeyboardInterrupt):
-        runner.run(
-            date(2026, 1, 2)
-        )
-
-    connection.rollback.assert_called_once()
-    connection.commit.assert_not_called()
-
-    assert call_order == [
-        "rollback",
-        "unlock",
-    ]
