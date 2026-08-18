@@ -41,3 +41,7 @@ def load_monetization_config() -> dict[str, Any]:
 
 def load_app_versions_config() -> dict[str, Any]:
     return load_yaml("app_versions.yaml")
+
+def load_campaigns_config() -> dict[str, Any]:
+    return load_yaml("campaigns.yaml")
+

@@ -45,6 +45,8 @@ class UserGenerator:
         self,
         rng: np.random.Generator,
         app_version: str | None = None,
+        channel_weights: dict[str, float] | None = None,
+        campaign_by_channel: dict[str, str] | None = None,
     ):
         self.rng = rng
         self.game_config = load_game_config()
@@ -56,6 +58,13 @@ class UserGenerator:
             else self.game_config["game"][
                 "default_app_version"
             ]
+        )
+
+        self.channel_weights = channel_weights
+        self.campaign_by_channel = (
+            campaign_by_channel
+            if campaign_by_channel is not None
+            else {}
         )
 
     def generate(
@@ -84,11 +93,19 @@ class UserGenerator:
         device_tier = self._weighted_choice(self.game_config["device_tiers"])
 
         channels = self.acquisition_config["channels"]
-        channel_weights = {
-            name: config["share"]
-            for name, config in channels.items()
-        }
-        acquisition_channel = self._weighted_choice(channel_weights)
+
+        channel_weights = (
+            self.channel_weights
+            if self.channel_weights is not None
+            else {
+                name: config["share"]
+                for name, config in channels.items()
+            }
+        )
+
+        acquisition_channel = self._weighted_choice(
+            channel_weights
+        )
 
         registration_ts = self._generate_registration_ts(registration_date)
 
@@ -142,7 +159,9 @@ class UserGenerator:
             platform=platform,
             device_tier=device_tier,
             acquisition_channel=acquisition_channel,
-            campaign_id=None,
+            campaign_id=self.campaign_by_channel.get(
+                acquisition_channel
+            ),
             initial_app_version=self.app_version,
         )
 
@@ -159,9 +178,27 @@ class UserGenerator:
 
     def _weighted_choice(self, values: dict[str, float]) -> str:
         names = list(values)
-        probabilities = list(values.values())
 
-        return str(self.rng.choice(names, p=probabilities))
+        probabilities = np.asarray(
+            list(values.values()),
+            dtype=float,
+        )
+
+        total = float(probabilities.sum())
+
+        if total <= 0:
+            raise ValueError(
+                "Weighted choice requires positive total weight"
+            )
+
+        probabilities = probabilities / total
+
+        return str(
+            self.rng.choice(
+                names,
+                p=probabilities,
+            )
+        )
 
     def _generate_registration_ts(self, registration_date: date) -> datetime:
         seconds = int(self.rng.integers(0, 24 * 60 * 60))

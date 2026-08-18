@@ -1,0 +1,12 @@
+campaigns:
+  - campaign_id: "tiktok_growth_2026"
+    channel: "tiktok"
+    start_day: 35
+    end_day: 49
+    acquisition_multiplier: 1.8
+
+  - campaign_id: "google_growth_2026"
+    channel: "google_ads"
+    start_day: 80
+    end_day: 94
+    acquisition_multiplier: 1.5

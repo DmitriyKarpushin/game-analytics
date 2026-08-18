@@ -7,6 +7,7 @@ import numpy as np
 from src.config.loader import (
     load_acquisition_config,
     load_app_versions_config,
+    load_campaigns_config,
     load_game_config,
     load_levels_config,
     load_monetization_config,
@@ -28,6 +29,7 @@ from src.generators.sessions import (
 )
 from src.generators.users import UserGenerator
 from src.simulation.app_versions import AppVersionResolver
+from src.simulation.campaigns import CampaignResolver
 from src.simulation.user_state import (
     ReturningUserState,
     UserActivitySelector,
@@ -68,6 +70,7 @@ class DailySimulation:
         self.levels_config = load_levels_config()["levels"]
         self.monetization_config = load_monetization_config()
         self.app_versions_config = load_app_versions_config()
+        self.campaigns_config = load_campaigns_config()
 
         simulation_config = self.game_config["simulation"]
 
@@ -78,6 +81,11 @@ class DailySimulation:
         self.app_version_resolver = AppVersionResolver(
             start_date=self.start_date,
             config=self.app_versions_config,
+        )
+
+        self.campaign_resolver = CampaignResolver(
+            start_date=self.start_date,
+            config=self.campaigns_config,
         )
 
         self.base_seed = (
@@ -111,6 +119,16 @@ class DailySimulation:
         user_generator = UserGenerator(
             rng=rng,
             app_version=app_version,
+            channel_weights=(
+                self._channel_weights_for_date(
+                    simulation_date
+                )
+            ),
+            campaign_by_channel=(
+                self._campaign_ids_for_date(
+                    simulation_date
+                )
+            ),
         )
 
         users, states = user_generator.generate(
@@ -609,6 +627,54 @@ class DailySimulation:
 
         return active_users
 
+    def _channel_weights_for_date(
+        self,
+        simulation_date: date,
+    ) -> dict[str, float]:
+        channels = self.acquisition_config["channels"]
+
+        return {
+            channel: (
+                float(config["share"])
+                * self.campaign_resolver.multiplier_for_channel(
+                    simulation_date,
+                    channel,
+                )
+            )
+            for channel, config in channels.items()
+        }
+
+    def _campaign_ids_for_date(
+        self,
+        simulation_date: date,
+    ) -> dict[str, str]:
+        result: dict[str, str] = {}
+
+        for channel in self.acquisition_config["channels"]:
+            campaign_id = (
+                self.campaign_resolver.campaign_id_for_channel(
+                    simulation_date,
+                    channel,
+                )
+            )
+
+            if campaign_id is not None:
+                result[channel] = campaign_id
+
+        return result
+
+    def _campaign_factor_for_date(
+        self,
+        simulation_date: date,
+    ) -> float:
+        return float(
+            sum(
+                self._channel_weights_for_date(
+                    simulation_date
+                ).values()
+            )
+        )
+
     def _lambda_for_date(
         self,
         simulation_date: date,
@@ -637,10 +703,17 @@ class DailySimulation:
             "weekday_factors"
         ][weekday_name]
 
+        campaign_factor = (
+            self._campaign_factor_for_date(
+                simulation_date
+            )
+        )
+
         return (
             config["base_lambda"]
             * trend
             * weekday_factor
+            * campaign_factor
         )
 
     def _generate_new_users_count(
