@@ -1,35 +1,34 @@
 purchase:
   base_daily_probability: 0.002
   payer_propensity_weight: 0.05
-
-  repeat_base_daily_probability: 0.10
-  repeat_payer_propensity_weight: 0.30
-  repeat_purchase_count_lambda: 1.50
+  repeat_base_daily_probability: 0.1
+  repeat_payer_propensity_weight: 0.3
+  repeat_purchase_count_lambda: 1.5
   max_purchases_per_day: 3
-
   preferred_price_median_usd: 5.0
-  preferred_price_sigma: 0.70
-
+  preferred_price_sigma: 0.7
   products:
-    - sku: coins_small
-      price_usd: 0.99
-    - sku: coins_medium
-      price_usd: 2.99
-    - sku: coins_standard
-      price_usd: 4.99
-    - sku: coins_large
-      price_usd: 9.99
-    - sku: coins_mega
-      price_usd: 19.99
-
+  - sku: coins_small
+    price_usd: 0.99
+  - sku: coins_medium
+    price_usd: 2.99
+  - sku: coins_standard
+    price_usd: 4.99
+  - sku: coins_large
+    price_usd: 9.99
+  - sku: coins_mega
+    price_usd: 19.99
+  level31_uplift:
+    level_id: 31
+    purchase_probability_multiplier: 1.8
+    preferred_price_multiplier: 1.35
 ads:
   rewarded:
-    base_probability: 0.10
+    base_probability: 0.1
     ad_tolerance_weight: 0.25
     engagement_weight: 0.15
-    max_probability: 0.80
+    max_probability: 0.8
     revenue_per_impression_usd: 0.018
-
   interstitial:
     base_probability: 0.25
     ad_tolerance_weight: -0.15

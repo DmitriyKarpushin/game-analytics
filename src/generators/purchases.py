@@ -14,6 +14,7 @@ class PurchaseUser:
     user_id: UUID
     payer_propensity: float
     total_spend: float = 0.0
+    current_level: int = 1
 
 
 class PurchaseGenerator:
@@ -31,6 +32,7 @@ class PurchaseGenerator:
         self,
         payer_propensity: float,
         has_purchased: bool = False,
+        current_level: int = 1,
     ) -> float:
         if has_purchased:
             probability = (
@@ -48,6 +50,12 @@ class PurchaseGenerator:
                 ]
                 * payer_propensity
             )
+
+        probability *= (
+            self._purchase_probability_multiplier(
+                current_level
+            )
+        )
 
         return float(
             np.clip(
@@ -70,6 +78,7 @@ class PurchaseGenerator:
         probability = self.purchase_probability(
             payer_propensity=user.payer_propensity,
             has_purchased=has_purchased,
+            current_level=user.current_level,
         )
 
         if self.rng.random() >= probability:
@@ -93,6 +102,12 @@ class PurchaseGenerator:
                     sigma=self.config[
                         "preferred_price_sigma"
                     ],
+                )
+            )
+
+            preferred_price *= (
+                self._preferred_price_multiplier(
+                    user.current_level
                 )
             )
 
@@ -162,6 +177,44 @@ class PurchaseGenerator:
         )
 
         return events
+
+    def _purchase_probability_multiplier(
+        self,
+        current_level: int,
+    ) -> float:
+        uplift = self.config.get(
+            "level31_uplift",
+            {},
+        )
+
+        if current_level != uplift.get("level_id"):
+            return 1.0
+
+        return float(
+            uplift.get(
+                "purchase_probability_multiplier",
+                1.0,
+            )
+        )
+
+    def _preferred_price_multiplier(
+        self,
+        current_level: int,
+    ) -> float:
+        uplift = self.config.get(
+            "level31_uplift",
+            {},
+        )
+
+        if current_level != uplift.get("level_id"):
+            return 1.0
+
+        return float(
+            uplift.get(
+                "preferred_price_multiplier",
+                1.0,
+            )
+        )
 
     def _purchase_count(
         self,

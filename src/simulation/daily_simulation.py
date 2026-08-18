@@ -392,6 +392,7 @@ class DailySimulation:
                             state.payer_propensity
                         ),
                         total_spend=state.total_spend,
+                        current_level=state.current_level,
                     ),
                     sessions_by_user.get(
                         user.user_id,
@@ -410,6 +411,9 @@ class DailySimulation:
                         ),
                         total_spend=(
                             candidate.total_spend
+                        ),
+                        current_level=(
+                            candidate.current_level
                         ),
                     ),
                     sessions_by_user.get(
