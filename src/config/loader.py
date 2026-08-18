@@ -45,3 +45,7 @@ def load_app_versions_config() -> dict[str, Any]:
 def load_campaigns_config() -> dict[str, Any]:
     return load_yaml("campaigns.yaml")
 
+
+def load_experiments_config() -> dict[str, Any]:
+    return load_yaml("experiments.yaml")
+

@@ -4,6 +4,7 @@ from uuid import UUID
 
 import numpy as np
 
+from src.experiments import ExperimentAssignment
 from src.generators.events import EventRecord
 from src.generators.sessions import SessionRecord
 
@@ -50,8 +51,10 @@ class GameplayGenerator:
         self,
         state: GameplayUserState,
         sessions: list[SessionRecord],
+        experiment: ExperimentAssignment | None = None,
     ) -> GameplayResult:
         events: list[EventRecord] = []
+        experiment_exposure_emitted = False
 
         frustration = float(
             np.clip(
@@ -75,6 +78,7 @@ class GameplayGenerator:
 
             while current_level <= self.max_level:
                 level_config = self.levels[current_level]
+
                 duration = int(
                     level_config["base_duration_sec"]
                 )
@@ -83,6 +87,31 @@ class GameplayGenerator:
 
                 if result_ts >= session.session_end_ts:
                     break
+
+                if (
+                    experiment is not None
+                    and current_level
+                    == experiment.eligible_level
+                    and not experiment_exposure_emitted
+                ):
+                    events.append(
+                        self._make_event(
+                            event_ts=cursor,
+                            user_id=state.user_id,
+                            session_id=session.session_id,
+                            event_name="experiment_exposure",
+                            level_id=current_level,
+                            attempt_number=None,
+                            event_properties={
+                                "experiment_id": (
+                                    experiment.experiment_id
+                                ),
+                                "variant": experiment.variant,
+                            },
+                        )
+                    )
+
+                    experiment_exposure_emitted = True
 
                 level_start = self._make_event(
                     event_ts=cursor,
@@ -97,8 +126,16 @@ class GameplayGenerator:
                 success_probability = (
                     self.success_probability(
                         skill=state.skill,
-                        difficulty=float(
-                            level_config["base_difficulty"]
+                        difficulty=(
+                            self.difficulty_for_level(
+                                level_id=current_level,
+                                base_difficulty=float(
+                                    level_config[
+                                        "base_difficulty"
+                                    ]
+                                ),
+                                experiment=experiment,
+                            )
                         ),
                         attempt_number=attempt_number,
                     )
@@ -173,6 +210,23 @@ class GameplayGenerator:
             next_attempt_number=attempt_number,
         )
 
+    def difficulty_for_level(
+        self,
+        level_id: int,
+        base_difficulty: float,
+        experiment: ExperimentAssignment | None = None,
+    ) -> float:
+        if (
+            experiment is None
+            or level_id != experiment.eligible_level
+        ):
+            return float(base_difficulty)
+
+        return float(
+            base_difficulty
+            * experiment.difficulty_multiplier
+        )
+
     def success_probability(
         self,
         skill: float,
@@ -228,6 +282,7 @@ class GameplayGenerator:
         event_name,
         level_id,
         attempt_number,
+        event_properties: dict | None = None,
     ) -> EventRecord:
         return EventRecord(
             event_id=UUID(
@@ -242,7 +297,11 @@ class GameplayGenerator:
             level_id=level_id,
             attempt_number=attempt_number,
             app_version=self.app_version,
-            event_properties={},
+            event_properties=(
+                {}
+                if event_properties is None
+                else event_properties
+            ),
         )
 
     @staticmethod

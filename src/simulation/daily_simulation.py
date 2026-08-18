@@ -8,6 +8,7 @@ from src.config.loader import (
     load_acquisition_config,
     load_app_versions_config,
     load_campaigns_config,
+    load_experiments_config,
     load_game_config,
     load_levels_config,
     load_monetization_config,
@@ -27,6 +28,7 @@ from src.generators.sessions import (
     SessionRecord,
     SessionUser,
 )
+from src.experiments import ExperimentResolver
 from src.generators.users import UserGenerator
 from src.simulation.app_versions import AppVersionResolver
 from src.simulation.campaigns import CampaignResolver
@@ -71,6 +73,7 @@ class DailySimulation:
         self.monetization_config = load_monetization_config()
         self.app_versions_config = load_app_versions_config()
         self.campaigns_config = load_campaigns_config()
+        self.experiments_config = load_experiments_config()
 
         simulation_config = self.game_config["simulation"]
 
@@ -86,6 +89,11 @@ class DailySimulation:
         self.campaign_resolver = CampaignResolver(
             start_date=self.start_date,
             config=self.campaigns_config,
+        )
+
+        self.experiment_resolver = ExperimentResolver(
+            start_date=self.start_date,
+            config=self.experiments_config,
         )
 
         self.base_seed = (
@@ -219,6 +227,7 @@ class DailySimulation:
                 new_states=states,
                 returning_users=active_returning_users,
                 app_version=app_version,
+                simulation_date=simulation_date,
             )
         )
 
@@ -441,6 +450,7 @@ class DailySimulation:
         new_states,
         returning_users: list[ReturningUserCandidate],
         app_version: str,
+        simulation_date: date,
     ) -> tuple[
         list[EventRecord],
         list[GameplayStateUpdate],
@@ -488,6 +498,12 @@ class DailySimulation:
                     next_attempt_number=1,
                 ),
                 user_sessions,
+                experiment=(
+                    self.experiment_resolver.assignment_for_user(
+                        user_id=user.user_id,
+                        simulation_date=simulation_date,
+                    )
+                ),
             )
 
             events.extend(result.events)
@@ -536,6 +552,12 @@ class DailySimulation:
                     ),
                 ),
                 user_sessions,
+                experiment=(
+                    self.experiment_resolver.assignment_for_user(
+                        user_id=candidate.user_id,
+                        simulation_date=simulation_date,
+                    )
+                ),
             )
 
             events.extend(result.events)
