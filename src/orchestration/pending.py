@@ -151,7 +151,7 @@ class PendingSimulationRunner:
 
                     self.connection.commit()
 
-                except Exception:
+                except BaseException:
                     self.connection.rollback()
                     raise
 

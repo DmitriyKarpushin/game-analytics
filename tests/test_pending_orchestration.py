@@ -240,3 +240,57 @@ def test_runner_rejects_parallel_execution(
 
     repository.fetch_success_dates.assert_not_called()
     simulation.run.assert_not_called()
+
+
+def test_runner_rolls_back_before_unlock_on_keyboard_interrupt(
+    monkeypatch,
+):
+    connection = MagicMock()
+    call_order = []
+
+    connection.rollback.side_effect = (
+        lambda: call_order.append("rollback")
+    )
+
+    simulation = MagicMock()
+    simulation.start_date = START
+    simulation.run.side_effect = KeyboardInterrupt()
+
+    repository = MagicMock()
+    repository.fetch_success_dates.return_value = [
+        date(2026, 1, 1),
+    ]
+
+    monkeypatch.setattr(
+        pending,
+        "try_advisory_lock",
+        lambda connection: True,
+    )
+
+    def record_unlock(connection):
+        call_order.append("unlock")
+
+    monkeypatch.setattr(
+        pending,
+        "release_advisory_lock",
+        record_unlock,
+    )
+
+    runner = PendingSimulationRunner(
+        connection=connection,
+        simulation=simulation,
+        run_repository=repository,
+    )
+
+    with pytest.raises(KeyboardInterrupt):
+        runner.run(
+            date(2026, 1, 2)
+        )
+
+    connection.rollback.assert_called_once()
+    connection.commit.assert_not_called()
+
+    assert call_order == [
+        "rollback",
+        "unlock",
+    ]
