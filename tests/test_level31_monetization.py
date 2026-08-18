@@ -96,3 +96,51 @@ def test_other_levels_have_no_uplift():
             )
             == pytest.approx(1.0)
         )
+
+
+def test_purchase_event_contains_current_level():
+    from datetime import datetime
+    from uuid import UUID
+
+    from src.generators.purchases import PurchaseUser
+    from src.generators.sessions import SessionRecord
+
+    generator = make_generator()
+    generator.config["base_daily_probability"] = 1.0
+    generator.config["payer_propensity_weight"] = 0.0
+    generator.config["products"] = [
+        {
+            "sku": "test_product",
+            "price_usd": 4.99,
+        }
+    ]
+
+    user_id = UUID(
+        "00000000-0000-4000-8000-000000000001"
+    )
+
+    session = SessionRecord(
+        session_id=UUID(
+            "00000000-0000-4000-8000-000000000002"
+        ),
+        user_id=user_id,
+        session_start_ts=datetime(
+            2026, 1, 1, 12, 0, 0
+        ),
+        session_end_ts=datetime(
+            2026, 1, 1, 12, 10, 0
+        ),
+    )
+
+    events = generator.generate_for_user(
+        PurchaseUser(
+            user_id=user_id,
+            payer_propensity=0.5,
+            total_spend=0.0,
+            current_level=31,
+        ),
+        [session],
+    )
+
+    assert len(events) == 1
+    assert events[0].level_id == 31

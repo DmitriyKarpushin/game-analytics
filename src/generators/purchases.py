@@ -156,7 +156,7 @@ class PurchaseGenerator:
                     user_id=user.user_id,
                     session_id=session.session_id,
                     event_name="purchase",
-                    level_id=None,
+                    level_id=user.current_level,
                     attempt_number=None,
                     app_version=self.app_version,
                     event_properties={
