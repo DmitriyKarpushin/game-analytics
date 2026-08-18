@@ -28,6 +28,24 @@ class SimulationRunRepository:
                 f"Simulation already completed for {simulation_date}"
             )
 
+    def fetch_success_dates(self) -> list[date]:
+        with self.connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT simulation_date
+                FROM simulation_runs
+                WHERE status = 'success'
+                ORDER BY simulation_date
+                """
+            )
+
+            rows = cursor.fetchall()
+
+        return [
+            row[0]
+            for row in rows
+        ]
+
     def start(self, simulation_date: date, seed: int) -> None:
         with self.connection.cursor() as cursor:
             cursor.execute(
