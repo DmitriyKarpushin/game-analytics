@@ -28,6 +28,8 @@ class ReturningUserCandidate:
     total_levels_completed: int = 0
     total_levels_failed: int = 0
     next_attempt_number: int = 1
+    platform: str = "android"
+    device_tier: str = "mid"
 
 
 @dataclass(frozen=True)
@@ -195,7 +197,9 @@ class UserRepository:
                             1
                         )
                         ELSE 1
-                    END AS next_attempt_number
+                    END AS next_attempt_number,
+                    u.platform,
+                    u.device_tier
                 FROM raw_users u
                 JOIN generator_user_state s
                     USING (user_id)
@@ -230,6 +234,8 @@ class UserRepository:
                 total_levels_completed=int(row[12]),
                 total_levels_failed=int(row[13]),
                 next_attempt_number=int(row[14]),
+                platform=str(row[15]),
+                device_tier=str(row[16]),
             )
             for row in rows
         ]

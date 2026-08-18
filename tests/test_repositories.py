@@ -31,6 +31,8 @@ def test_fetch_returning_candidates():
             3,
             2,
             3,
+            "android",
+            "low",
         )
     ]
 
@@ -61,6 +63,8 @@ def test_fetch_returning_candidates():
     assert candidate.total_levels_completed == 3
     assert candidate.total_levels_failed == 2
     assert candidate.next_attempt_number == 3
+    assert candidate.platform == "android"
+    assert candidate.device_tier == "low"
 
     cursor.execute.assert_called_once()
 

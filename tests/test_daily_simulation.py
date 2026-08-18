@@ -132,6 +132,7 @@ def test_returning_selection_is_reproducible():
             candidates,
             date(2026, 1, 2),
             np.random.default_rng(42),
+            app_version="1.0",
         )
     )
 
@@ -140,6 +141,7 @@ def test_returning_selection_is_reproducible():
             candidates,
             date(2026, 1, 2),
             np.random.default_rng(42),
+            app_version="1.0",
         )
     )
 
@@ -163,6 +165,7 @@ def test_returning_selection_returns_subset():
             candidates,
             date(2026, 1, 2),
             np.random.default_rng(42),
+            app_version="1.0",
         )
     )
 

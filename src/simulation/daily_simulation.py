@@ -6,6 +6,7 @@ import numpy as np
 
 from src.config.loader import (
     load_acquisition_config,
+    load_app_versions_config,
     load_game_config,
     load_levels_config,
     load_monetization_config,
@@ -26,6 +27,7 @@ from src.generators.sessions import (
     SessionUser,
 )
 from src.generators.users import UserGenerator
+from src.simulation.app_versions import AppVersionResolver
 from src.simulation.user_state import (
     ReturningUserState,
     UserActivitySelector,
@@ -65,11 +67,17 @@ class DailySimulation:
         self.acquisition_config = load_acquisition_config()
         self.levels_config = load_levels_config()["levels"]
         self.monetization_config = load_monetization_config()
+        self.app_versions_config = load_app_versions_config()
 
         simulation_config = self.game_config["simulation"]
 
         self.start_date = date.fromisoformat(
             simulation_config["start_date"]
+        )
+
+        self.app_version_resolver = AppVersionResolver(
+            start_date=self.start_date,
+            config=self.app_versions_config,
         )
 
         self.base_seed = (
@@ -84,6 +92,12 @@ class DailySimulation:
         seed = self._seed_for_date(simulation_date)
         rng = np.random.default_rng(seed)
 
+        app_version = (
+            self.app_version_resolver.version_for_date(
+                simulation_date
+            )
+        )
+
         self.run_repository.start(
             simulation_date=simulation_date,
             seed=seed,
@@ -94,7 +108,10 @@ class DailySimulation:
             rng,
         )
 
-        user_generator = UserGenerator(rng)
+        user_generator = UserGenerator(
+            rng=rng,
+            app_version=app_version,
+        )
 
         users, states = user_generator.generate(
             count=users_count,
@@ -115,6 +132,7 @@ class DailySimulation:
                 candidates=returning_candidates,
                 simulation_date=simulation_date,
                 rng=rng,
+                app_version=app_version,
             )
         )
 
@@ -131,7 +149,12 @@ class DailySimulation:
                     SessionUser(
                         user_id=user.user_id,
                         engagement_propensity=(
-                            state.engagement_propensity
+                            self._effective_engagement(
+                                engagement=state.engagement_propensity,
+                                app_version=app_version,
+                                platform=user.platform,
+                                device_tier=user.device_tier,
+                            )
                         ),
                         earliest_start_ts=user.registration_ts,
                     ),
@@ -145,7 +168,14 @@ class DailySimulation:
                     SessionUser(
                         user_id=candidate.user_id,
                         engagement_propensity=(
-                            candidate.engagement_propensity
+                            self._effective_engagement(
+                                engagement=(
+                                    candidate.engagement_propensity
+                                ),
+                                app_version=app_version,
+                                platform=candidate.platform,
+                                device_tier=candidate.device_tier,
+                            )
                         ),
                     ),
                     simulation_date,
@@ -154,9 +184,7 @@ class DailySimulation:
 
         event_generator = EventGenerator(
             rng=rng,
-            app_version=self.game_config["game"][
-                "default_app_version"
-            ],
+            app_version=app_version,
         )
 
         session_events = (
@@ -172,6 +200,7 @@ class DailySimulation:
                 new_users=users,
                 new_states=states,
                 returning_users=active_returning_users,
+                app_version=app_version,
             )
         )
 
@@ -181,6 +210,7 @@ class DailySimulation:
             new_users=users,
             new_states=states,
             returning_users=active_returning_users,
+            app_version=app_version,
         )
 
         ad_events = self._generate_ads(
@@ -189,6 +219,7 @@ class DailySimulation:
             new_users=users,
             new_states=states,
             returning_users=active_returning_users,
+            app_version=app_version,
         )
 
         events: list[EventRecord] = [
@@ -241,6 +272,7 @@ class DailySimulation:
         new_users,
         new_states,
         returning_users: list[ReturningUserCandidate],
+        app_version: str,
     ) -> list[EventRecord]:
         sessions_by_user = defaultdict(list)
 
@@ -252,9 +284,7 @@ class DailySimulation:
         generator = AdGenerator(
             rng=rng,
             ads_config=self.monetization_config["ads"],
-            app_version=self.game_config["game"][
-                "default_app_version"
-            ],
+            app_version=app_version,
         )
 
         events: list[EventRecord] = []
@@ -265,7 +295,12 @@ class DailySimulation:
                     AdUser(
                         user_id=user.user_id,
                         engagement_propensity=(
-                            state.engagement_propensity
+                            self._effective_engagement(
+                                engagement=state.engagement_propensity,
+                                app_version=app_version,
+                                platform=user.platform,
+                                device_tier=user.device_tier,
+                            )
                         ),
                         ad_tolerance=state.ad_tolerance,
                     ),
@@ -282,7 +317,14 @@ class DailySimulation:
                     AdUser(
                         user_id=candidate.user_id,
                         engagement_propensity=(
-                            candidate.engagement_propensity
+                            self._effective_engagement(
+                                engagement=(
+                                    candidate.engagement_propensity
+                                ),
+                                app_version=app_version,
+                                platform=candidate.platform,
+                                device_tier=candidate.device_tier,
+                            )
                         ),
                         ad_tolerance=(
                             candidate.ad_tolerance
@@ -304,6 +346,7 @@ class DailySimulation:
         new_users,
         new_states,
         returning_users: list[ReturningUserCandidate],
+        app_version: str,
     ) -> list[EventRecord]:
         sessions_by_user = defaultdict(list)
 
@@ -317,9 +360,7 @@ class DailySimulation:
             purchase_config=self.monetization_config[
                 "purchase"
             ],
-            app_version=self.game_config["game"][
-                "default_app_version"
-            ],
+            app_version=app_version,
         )
 
         events: list[EventRecord] = []
@@ -369,6 +410,7 @@ class DailySimulation:
         new_users,
         new_states,
         returning_users: list[ReturningUserCandidate],
+        app_version: str,
     ) -> tuple[
         list[EventRecord],
         list[GameplayStateUpdate],
@@ -384,9 +426,7 @@ class DailySimulation:
             rng=rng,
             gameplay_config=self.game_config["gameplay"],
             levels_config=self.levels_config,
-            app_version=self.game_config["game"][
-                "default_app_version"
-            ],
+            app_version=app_version,
         )
 
         events: list[EventRecord] = []
@@ -488,11 +528,35 @@ class DailySimulation:
 
         return events, updates
 
+    def _effective_engagement(
+        self,
+        engagement: float,
+        app_version: str,
+        platform: str,
+        device_tier: str,
+    ) -> float:
+        multiplier = (
+            self.app_version_resolver.engagement_multiplier(
+                version=app_version,
+                platform=platform,
+                device_tier=device_tier,
+            )
+        )
+
+        return float(
+            np.clip(
+                engagement * multiplier,
+                0.01,
+                0.99,
+            )
+        )
+
     def _select_returning_active_users(
         self,
         candidates: list[ReturningUserCandidate],
         simulation_date: date,
         rng: np.random.Generator,
+        app_version: str,
     ) -> list[ReturningUserCandidate]:
         selector = UserActivitySelector(
             rng=rng,
@@ -515,7 +579,14 @@ class DailySimulation:
                     candidate.last_active_date
                 ),
                 engagement_propensity=(
-                    candidate.engagement_propensity
+                    self._effective_engagement(
+                        engagement=(
+                            candidate.engagement_propensity
+                        ),
+                        app_version=app_version,
+                        platform=candidate.platform,
+                        device_tier=candidate.device_tier,
+                    )
                 ),
                 frustration_score=(
                     candidate.frustration_score

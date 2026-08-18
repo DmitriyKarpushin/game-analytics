@@ -46,6 +46,7 @@ def test_missing_recent_success_uses_default(monkeypatch):
         candidates=[candidate],
         simulation_date=date(2026, 1, 2),
         rng=MagicMock(),
+        app_version="1.0",
     )
 
     assert active == [candidate]

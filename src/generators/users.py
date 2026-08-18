@@ -41,10 +41,22 @@ class UserStateRecord:
 
 
 class UserGenerator:
-    def __init__(self, rng: np.random.Generator):
+    def __init__(
+        self,
+        rng: np.random.Generator,
+        app_version: str | None = None,
+    ):
         self.rng = rng
         self.game_config = load_game_config()
         self.acquisition_config = load_acquisition_config()
+
+        self.app_version = (
+            app_version
+            if app_version is not None
+            else self.game_config["game"][
+                "default_app_version"
+            ]
+        )
 
     def generate(
         self,
@@ -131,9 +143,7 @@ class UserGenerator:
             device_tier=device_tier,
             acquisition_channel=acquisition_channel,
             campaign_id=None,
-            initial_app_version=self.game_config["game"][
-                "default_app_version"
-            ],
+            initial_app_version=self.app_version,
         )
 
         state = UserStateRecord(
