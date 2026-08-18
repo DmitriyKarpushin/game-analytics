@@ -40,6 +40,10 @@ class GameplayGenerator:
         self.rng = rng
         self.config = gameplay_config
         self.levels = levels_config
+        self.max_level = max(
+            int(level_id)
+            for level_id in self.levels
+        )
         self.app_version = app_version
 
     def generate(
@@ -69,7 +73,7 @@ class GameplayGenerator:
         ):
             cursor = session.session_start_ts
 
-            while current_level <= 50:
+            while current_level <= self.max_level:
                 level_config = self.levels[current_level]
                 duration = int(
                     level_config["base_duration_sec"]

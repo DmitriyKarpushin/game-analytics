@@ -14,7 +14,7 @@ class PurchaseUser:
     user_id: UUID
     payer_propensity: float
     total_spend: float = 0.0
-    current_level: int = 1
+    current_level: int | None = 1
 
 
 class PurchaseGenerator:
@@ -180,7 +180,7 @@ class PurchaseGenerator:
 
     def _purchase_probability_multiplier(
         self,
-        current_level: int,
+        current_level: int | None,
     ) -> float:
         uplift = self.config.get(
             "level31_uplift",
@@ -199,7 +199,7 @@ class PurchaseGenerator:
 
     def _preferred_price_multiplier(
         self,
-        current_level: int,
+        current_level: int | None,
     ) -> float:
         uplift = self.config.get(
             "level31_uplift",
