@@ -25,3 +25,6 @@ htmlcov/
 # Generated local data
 data/
 /backups/
+/analytics/dbt/target/
+/analytics/dbt/logs/
+/analytics/dbt/dbt_packages/

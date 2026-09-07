@@ -1,0 +1,45 @@
+version: 2
+
+sources:
+  - name: raw
+    description: >
+      Frozen engineering source layer for the Mobile Game
+      Analytics project.
+
+    database: "{{ env_var('POSTGRES_DB') }}"
+    schema: public
+
+    tables:
+      - name: raw_users
+        description: >
+          One row per registered game user.
+
+      - name: raw_events
+        description: >
+          Immutable application event stream.
+
+      - name: levels
+        description: >
+          Static level configuration dimension.
+
+      - name: simulation_runs
+        description: >
+          Operational metadata for generated virtual days.
+
+        config:
+          freshness:
+            warn_after:
+              count: 26
+              period: hour
+
+            error_after:
+              count: 50
+              period: hour
+
+          loaded_at_field: finished_at
+
+      - name: generator_user_state
+        description: >
+          Upstream generator state. Contains latent engineering
+          attributes and should not normally be used in
+          analyst-facing models.

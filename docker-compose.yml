@@ -25,10 +25,38 @@ services:
   app:
     build:
       context: .
+
     container_name: game-analytics-app
 
     env_file:
       - .env
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+    networks:
+      - analytics_net
+
+    profiles:
+      - tools
+
+  dbt:
+    build:
+      context: ./analytics/dbt
+
+    container_name: game-analytics-dbt
+
+    env_file:
+      - .env
+
+    environment:
+      DBT_PROFILES_DIR: /usr/app
+
+    working_dir: /usr/app
+
+    volumes:
+      - ./analytics/dbt:/usr/app
 
     depends_on:
       postgres:

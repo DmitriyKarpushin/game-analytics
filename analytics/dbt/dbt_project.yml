@@ -1,0 +1,43 @@
+name: "game_analytics"
+version: "1.0.0"
+config-version: 2
+
+profile: "game_analytics"
+
+model-paths:
+  - "models"
+
+analysis-paths:
+  - "analyses"
+
+test-paths:
+  - "tests"
+
+seed-paths:
+  - "seeds"
+
+macro-paths:
+  - "macros"
+
+snapshot-paths:
+  - "snapshots"
+
+target-path: "target"
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  game_analytics:
+    staging:
+      +materialized: view
+      +schema: staging
+
+    intermediate:
+      +materialized: view
+      +schema: intermediate
+
+    marts:
+      +materialized: table
+      +schema: marts
