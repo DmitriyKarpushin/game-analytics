@@ -1,0 +1,236 @@
+version: 2
+
+models:
+  - name: int_sessions
+    description: >
+      One row per game session, derived from session_start
+      and session_end events.
+
+    columns:
+      - name: session_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_users')
+                field: user_id
+
+      - name: session_started_at
+        data_tests:
+          - not_null
+
+      - name: session_ended_at
+        data_tests:
+          - not_null
+
+      - name: session_date
+        data_tests:
+          - not_null
+
+      - name: session_duration_sec
+        data_tests:
+          - not_null
+
+  - name: int_gameplay_attempts
+    description: >
+      One row per gameplay attempt, pairing level_start
+      with its level_complete or level_fail outcome.
+
+    columns:
+      - name: attempt_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: outcome_event_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_users')
+                field: user_id
+
+      - name: session_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_sessions')
+                field: session_id
+
+      - name: level_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levels')
+                field: level_id
+
+      - name: attempt_number
+        data_tests:
+          - not_null
+
+      - name: outcome
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - level_complete
+                  - level_fail
+
+      - name: is_success
+        data_tests:
+          - not_null
+
+  - name: int_purchases
+    description: >
+      One row per in-app purchase.
+
+    columns:
+      - name: purchase_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: purchased_at
+        data_tests:
+          - not_null
+
+      - name: purchase_date
+        data_tests:
+          - not_null
+
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_users')
+                field: user_id
+
+      - name: session_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_sessions')
+                field: session_id
+
+      - name: sku
+        data_tests:
+          - not_null
+
+      - name: currency
+        data_tests:
+          - not_null
+
+      - name: revenue_usd
+        data_tests:
+          - not_null
+
+  - name: int_ads
+    description: >
+      One row per paired ad impression and ad revenue event.
+
+    columns:
+      - name: ad_impression_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: ad_revenue_event_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_users')
+                field: user_id
+
+      - name: session_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_sessions')
+                field: session_id
+
+      - name: ad_format
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - rewarded
+                  - interstitial
+
+      - name: revenue_usd
+        data_tests:
+          - not_null
+
+  - name: int_experiment_exposures
+    description: >
+      One row per experiment exposure event.
+      Grain is experiment exposure event; repeated eligible
+      days for the same user remain separate rows.
+
+    columns:
+      - name: exposure_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: exposed_at
+        data_tests:
+          - not_null
+
+      - name: exposure_date
+        data_tests:
+          - not_null
+
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_users')
+                field: user_id
+
+      - name: session_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('int_sessions')
+                field: session_id
+
+      - name: level_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_levels')
+                field: level_id
+
+      - name: experiment_id
+        data_tests:
+          - not_null
+
+      - name: variant
+        data_tests:
+          - not_null
