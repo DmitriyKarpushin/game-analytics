@@ -3,6 +3,7 @@ services:
     image: postgres:17
     container_name: game-analytics-postgres
     restart: unless-stopped
+    shm_size: 256mb
 
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
