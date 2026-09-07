@@ -1,0 +1,159 @@
+version: 2
+
+models:
+  - name: stg_users
+    description: >
+      One row per registered game user. Thin analyst-facing
+      staging model over raw_users.
+
+    columns:
+      - name: user_id
+        description: Unique user identifier.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: registered_at
+        description: User registration timestamp.
+        data_tests:
+          - not_null
+
+      - name: registration_date
+        description: Calendar date of registration.
+        data_tests:
+          - not_null
+
+      - name: platform
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - android
+                  - ios
+
+      - name: device_tier
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - low
+                  - mid
+                  - high
+
+      - name: acquisition_channel
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - organic
+                  - google_ads
+                  - tiktok
+                  - facebook
+                  - referral
+
+      - name: initial_app_version
+        data_tests:
+          - not_null
+
+  - name: stg_events
+    description: >
+      Immutable application event stream with standardized
+      timestamp naming.
+
+    columns:
+      - name: event_id
+        description: Unique event identifier.
+        data_tests:
+          - not_null
+          - unique
+
+      - name: event_at
+        data_tests:
+          - not_null
+
+      - name: event_date
+        data_tests:
+          - not_null
+
+      - name: user_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_users')
+                field: user_id
+
+      - name: event_name
+        data_tests:
+          - not_null
+
+      - name: level_id
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('stg_levels')
+                field: level_id
+
+      - name: app_version
+        data_tests:
+          - not_null
+
+  - name: stg_levels
+    description: Static game level dimension.
+
+    columns:
+      - name: level_id
+        data_tests:
+          - not_null
+          - unique
+
+      - name: base_difficulty
+        data_tests:
+          - not_null
+
+      - name: energy_cost
+        data_tests:
+          - not_null
+
+      - name: reward_coins
+        data_tests:
+          - not_null
+
+      - name: base_duration_sec
+        data_tests:
+          - not_null
+
+  - name: stg_simulation_runs
+    description: >
+      Operational metadata for each generated virtual day.
+
+    columns:
+      - name: simulation_date
+        data_tests:
+          - not_null
+          - unique
+
+      - name: status
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values:
+                  - running
+                  - success
+                  - failed
+
+      - name: seed
+        data_tests:
+          - not_null
+
+      - name: users_created
+        data_tests:
+          - not_null
+
+      - name: events_created
+        data_tests:
+          - not_null
