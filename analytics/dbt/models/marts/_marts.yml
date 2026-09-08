@@ -1,0 +1,120 @@
+version: 2
+
+models:
+  - name: fct_user_daily
+    description: >
+      Daily user-level analytical fact table.
+      Grain: one row per user_id and activity_date.
+
+    columns:
+      - name: user_id
+        description: Unique identifier of the user.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_users')
+                field: user_id
+
+      - name: activity_date
+        description: Calendar date of user activity.
+        data_tests:
+          - not_null
+
+      - name: registration_date
+        description: User registration date.
+        data_tests:
+          - not_null
+
+      - name: days_since_registration
+        description: Number of days between registration and activity date.
+        data_tests:
+          - not_null
+
+      - name: country
+        description: User country.
+
+      - name: platform
+        description: Mobile platform.
+        data_tests:
+          - not_null
+
+      - name: device_tier
+        description: Device performance segment.
+
+      - name: acquisition_channel
+        description: User acquisition channel.
+        data_tests:
+          - not_null
+
+      - name: campaign_id
+        description: Acquisition campaign identifier when applicable.
+
+      - name: initial_app_version
+        description: App version at registration.
+
+      - name: sessions
+        description: Number of sessions during the activity day.
+        data_tests:
+          - not_null
+
+      - name: session_duration_sec
+        description: Total session duration during the activity day, in seconds.
+        data_tests:
+          - not_null
+
+      - name: attempts
+        description: Number of gameplay attempts during the day.
+        data_tests:
+          - not_null
+
+      - name: level_completes
+        description: Number of successful gameplay attempts.
+        data_tests:
+          - not_null
+
+      - name: level_fails
+        description: Number of failed gameplay attempts.
+        data_tests:
+          - not_null
+
+      - name: levels_attempted
+        description: Number of distinct levels attempted during the day.
+        data_tests:
+          - not_null
+
+      - name: max_level_started
+        description: Highest level attempted during the day.
+
+      - name: max_level_completed
+        description: Highest level successfully completed during the day.
+
+      - name: purchases
+        description: Number of purchases during the day.
+        data_tests:
+          - not_null
+
+      - name: purchase_revenue_usd
+        description: Purchase revenue generated during the day, in USD.
+        data_tests:
+          - not_null
+
+      - name: ad_impressions
+        description: Number of ad impressions during the day.
+        data_tests:
+          - not_null
+
+      - name: ad_revenue_usd
+        description: Advertising revenue generated during the day, in USD.
+        data_tests:
+          - not_null
+
+      - name: total_revenue_usd
+        description: Purchase revenue plus advertising revenue.
+        data_tests:
+          - not_null
+
+      - name: is_payer
+        description: True when the user made at least one purchase during the day.
+        data_tests:
+          - not_null
