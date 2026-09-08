@@ -3,6 +3,8 @@ services:
     image: postgres:17
     container_name: game-analytics-postgres
     restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
     shm_size: 256mb
 
     environment:
